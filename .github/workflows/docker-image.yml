@@ -12,7 +12,10 @@ jobs:
 
     runs-on: windows-latest
 
+    env:
+      DOCKER_BUILDKIT: true
+
     steps:
     - uses: actions/checkout@v3
     - name: Build the Docker image
-      run: DOCKER_BUILDKIT=true docker build . --file Dockerfile --tag dancer-build:$(date +%s) --output out
+      run: docker build . --file Dockerfile --tag dancer-build:$(date +%s) --output out
