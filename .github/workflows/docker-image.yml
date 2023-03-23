@@ -19,10 +19,10 @@ jobs:
         python-version: '3.10'
 
     - name: Install dependencies
-      run: pip install -r requirements.txt
+      run: pip install -r requirements.txt --prefer-binary
       
     - name: Install pyinstaller
-      run: pip install pyinstaller
+      run: pip install pyinstaller --prefer-binary
 
     - name: Build executeable
       run: pyinstaller --onefile kinter.py --name PythonDancer.exe
