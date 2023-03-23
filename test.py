@@ -3,17 +3,17 @@ import numpy as np
 
 #TODO: Fix action lag that happens sometimes, maybe change hop?
 def load_audio_data(audio_file, hop_length=1024, frame_length=1024):
-	y, sr = librosa.load(audio_file, sr=None, mono=True)
+	y, sr = librosa.core.load(audio_file, sr=None, mono=True)
 
 	# Compute beats
 	tempo, beats = librosa.beat.beat_track(y=y, sr=sr, hop_length=hop_length, trim=False, units="time")
 
 	# Compute energy (RMS)
 	rms = librosa.feature.rms(y=y, frame_length=frame_length, hop_length=hop_length)[0]
-	frames = librosa.frames_to_time(np.arange(len(rms)), sr=sr, hop_length=hop_length)
+	frames = librosa.core.frames_to_time(np.arange(len(rms)), sr=sr, hop_length=hop_length)
 
 	# Compute pitch
-	pitches, magnitudes = librosa.piptrack(y=y, sr=sr, hop_length=hop_length, center=True)
+	pitches, magnitudes = librosa.core.piptrack(y=y, sr=sr, hop_length=hop_length, center=True)
 	#TODO: The fuck does this do
 	mean_pitches = np.sum(pitches * magnitudes, axis=0) / np.sum(magnitudes, axis=0)
 
@@ -40,7 +40,7 @@ def load_audio_data(audio_file, hop_length=1024, frame_length=1024):
 	fpitch = np.array([max(i,1) for i in fpitch])
 
 	return {
-		"at": librosa.get_duration(y=y, sr=sr, hop_length=hop_length),
+		"at": librosa.core.get_duration(y=y, sr=sr, hop_length=hop_length),
 		"beats": beats,
 		"pitch": np.log10(fpitch),
 		"energy": frms
