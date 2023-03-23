@@ -12,9 +12,6 @@ jobs:
 
     runs-on: windows-latest
 
-    env:
-      DOCKER_BUILDKIT: true
-
     steps:
     - uses: actions/checkout@v3
     - uses: actions/setup-python@v4
