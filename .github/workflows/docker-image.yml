@@ -17,5 +17,14 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
-    - name: Build the Docker image
-      run: docker build . --file Dockerfile --tag dancer-build:$(date +%s) --output out
+    - uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+    - name: Install dependencies
+      run: pip install -r requirements
+      
+    - name: Install pyinstaller
+      run: pip install pyinstaller
+
+    - name: Build executeable
+      run: pyinstaller --onefile kinter.py --name PythonDancer.exe
