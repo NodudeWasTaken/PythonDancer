@@ -58,8 +58,12 @@ def res():
 		)
 
 		# plotting the graph
-		my_cmap = LinearSegmentedColormap.from_list("intensity",["w", "g", "y", "orange", "r"], N=256)
-		plot2.plot(*map(list, zip(*result)), linewidth=.5)
+		X,Y = map(list, zip(*result))
+		plot2.plot(X,Y, linewidth=.5)
+
+		#my_cmap = LinearSegmentedColormap.from_list("intensity",["w", "g", "y", "orange", "r"], N=256)
+		#rescale = lambda y: (y - np.min(y)) / (np.max(y) - np.min(y))
+		#plot2.bar(np.arange(len(X)), height=0.05, width=1, bottom=0, color=my_cmap(rescale(X)))
 
 	canvas2.draw()
 	plot2.clear()
@@ -73,16 +77,16 @@ if True:
 
 	# creating the Tkinter canvas
 	# containing the Matplotlib figure
-	canvas2 = FigureCanvasTkAgg(fig2, master = master)  
+	canvas2 = FigureCanvasTkAgg(fig2, master = master)
 	canvas2.draw()
 
 	# placing the canvas on the Tkinter window
 	canvas2.get_tk_widget().pack()
 
-pitch_offset = Scale(master, from_=200, to=-200, orient='vertical', command=lambda v: res())
+pitch_offset = Scale(master, from_=200, to=-200, length=150, orient='vertical', command=lambda v: res())
 pitch_offset.set(100)
 pitch_offset.pack(side=LEFT)
-energy_mult = Scale(master, from_=10, to=0, resolution=-1 , orient='vertical', command=lambda v: res())
+energy_mult = Scale(master, from_=10, to=0, length=150, resolution=-1 , orient='vertical', command=lambda v: res())
 energy_mult.set(1)
 energy_mult.pack(side=LEFT)
 
