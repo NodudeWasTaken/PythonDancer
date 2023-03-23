@@ -25,12 +25,12 @@ jobs:
       run: pip install pyinstaller --prefer-binary
 
     - name: Build executeable
-      run: pyinstaller --onefile kinter.py --name PythonDancer.exe
+      run: pyinstaller --additional-hooks-dir "extra-hooks" --onefile kinter.py --name PythonDancer.exe
 
     - name: Archive production artifacts
       uses: actions/upload-artifact@v3
       with:
-        name: dist-without-markdown
+        name: build
         path: |
           dist
           !dist/**/*.md

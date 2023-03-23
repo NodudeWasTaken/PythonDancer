@@ -1,12 +1,19 @@
 #Welcome to ugly piece of shit gui 1.0!
 from tkinter import *
 from tkinter import filedialog as fd
+from matplotlib import cm
+import matplotlib.pyplot as plt
+from matplotlib.colors import LinearSegmentedColormap, ListedColormap, BoundaryNorm
+from matplotlib.collections import LineCollection
 from matplotlib.figure import Figure
+from matplotlib.lines import Line2D
 from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg, NavigationToolbar2Tk)
 from test import load_audio_data, create_actions
 import subprocess, os, json
+import numpy as np
 
 master = Tk()
+plt.style.use(["ggplot", "dark_background", "fast"])
 
 data = None
 
@@ -37,9 +44,6 @@ if True:
 	# placing the canvas on the Tkinter window
 	canvas1.get_tk_widget().pack()
 
-	# placing the toolbar on the Tkinter window
-	canvas1.get_tk_widget().pack()
-
 result = []
 def res():
 	global result
@@ -54,12 +58,11 @@ def res():
 		)
 
 		# plotting the graph
+		my_cmap = LinearSegmentedColormap.from_list("intensity",["w", "g", "y", "orange", "r"], N=256)
 		plot2.plot(*map(list, zip(*result)), linewidth=.5)
-		#TODO: Color
 
 	canvas2.draw()
 	plot2.clear()
-	ree()
 
 if True:
 	# the figure that will contain the plot
@@ -75,10 +78,6 @@ if True:
 
 	# placing the canvas on the Tkinter window
 	canvas2.get_tk_widget().pack()
-
-	# placing the toolbar on the Tkinter window
-	canvas2.get_tk_widget().pack()
-
 
 pitch_offset = Scale(master, from_=200, to=-200, orient='vertical', command=lambda v: res())
 pitch_offset.set(100)
@@ -104,6 +103,7 @@ def loadfile():
 	filename = fd.askopenfile(title='Open a file')
 	audio_file = os.path.basename(filename.name)
 	cur_file = audio_file
+	master.title(cur_file)
 	audio_file = os.path.splitext(audio_file)[0] + ".wav"
 	audio_file = os.path.join("tmp", audio_file)
 
@@ -122,6 +122,7 @@ def loadfile():
 
 	data = load_audio_data(audio_file)
 	res()
+	ree()
 
 def savefile():
 	with fd.asksaveasfile(
