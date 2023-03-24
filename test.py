@@ -54,10 +54,10 @@ def default_peak(pos, at, last_pos, last_at):
 	return [(at, min(max(0,pos),100))]
 
 def int_at(pos, at, last_pos, last_at, limit):
-    before_ratio = abs(last_pos - limit)
-    after_ratio = abs(pos - limit)
+	before_ratio = abs(last_pos - limit)
+	after_ratio = abs(pos - limit)
 
-    return (before_ratio * at + after_ratio * last_at) / (after_ratio + before_ratio)
+	return (before_ratio * at + after_ratio * last_at) / (after_ratio + before_ratio)
 
 def create_peak_bounce(pos, at, last_pos, last_at):
 	actions = []
