@@ -16,6 +16,8 @@ master = Tk()
 plt.style.use(["ggplot", "dark_background", "fast"])
 
 data = None
+heatmap = True
+delay = False
 
 def ree():
 	global data
@@ -44,10 +46,17 @@ if True:
 	# placing the canvas on the Tkinter window
 	canvas1.get_tk_widget().pack()
 
+def speed(A,B):
+	return (abs(B[1] - A[1]) / abs(B[0] - A[0])) / 500
+
 result = []
-def res():
+my_cmap = LinearSegmentedColormap.from_list("intensity",["w", "g", "orange", "r"], N=256)
+def _res():
 	global result
 	global data
+	global heatmap
+	global task
+	global cancl
 
 	if data != None:
 		result = create_actions(
@@ -59,14 +68,39 @@ def res():
 
 		# plotting the graph
 		X,Y = map(list, zip(*result))
-		plot2.plot(X,Y, linewidth=.5)
+		if (not heatmap):
+			plot2.plot(X,Y, linewidth=.5)
+		else:
+			points = np.array([X, Y]).T.reshape(-1, 1, 2)
+			segments = np.concatenate([points[:-1], points[1:]], axis=1)
 
-		#my_cmap = LinearSegmentedColormap.from_list("intensity",["w", "g", "y", "orange", "r"], N=256)
-		#rescale = lambda y: (y - np.min(y)) / (np.max(y) - np.min(y))
-		#plot2.bar(np.arange(len(X)), height=0.05, width=1, bottom=0, color=my_cmap(rescale(X)))
+			colors = [my_cmap(speed((X[i-1], Y[i-1]), (X[i], Y[i]))) for i in range(1,len(Y))]
+
+			lc = LineCollection(segments, colors=colors, linewidths=.5)
+			plot2.add_collection(lc)
+			plot2.autoscale()
+		#TODO: Heatbar for performance?
+		plot2.margins(0.05)
 
 	canvas2.draw()
 	plot2.clear()
+	task = None
+	cancl = 0
+
+task = None
+cancl = 0
+def res():
+	global task
+	global delay
+	global cancl
+
+	if (delay):
+		if (task != None):
+			master.after_cancel(task)
+			cancl += 1
+		task = master.after(max(1, 220 - 2*cancl), _res)
+	else:
+		_res()
 
 if True:
 	# the figure that will contain the plot
@@ -134,15 +168,29 @@ def savefile():
 		initialfile=f"{os.path.splitext(cur_file)[0]}.funscript", 
 		filetypes=[("Funscript", ".funscript")]
 		) as f:
-		json.dump({
-			"actions": [{"at": at*1000, "pos": round(pos)} for at,pos in result]
-		}, f)
+			json.dump({
+				"actions": [{"at": at*1000, "pos": round(pos)} for at,pos in result]
+			}, f)
 
 loadbtn = Button(text="Load", command=loadfile)
 loadbtn.pack(side=LEFT)
 savebtn = Button(text="Save", command=savefile)
 savebtn.pack(side=LEFT)
 
+def asd():
+	global heatmap
+	heatmap=var1.get()
+	res()
+var1 = BooleanVar(value=True)
+c1 = Checkbutton(text='Heatmapping',variable=var1, onvalue=True, offvalue=False, command=asd)
+c1.pack(side=LEFT)
 
+def asc():
+	global delay
+	delay=var2.get()
+	res()
+var2 = BooleanVar(value=False)
+c2 = Checkbutton(text='Delay render',variable=var2, onvalue=True, offvalue=False, command=asc)
+c2.pack(side=LEFT)
 
 mainloop()
