@@ -169,7 +169,7 @@ def savefile():
 		filetypes=[("Funscript", ".funscript")]
 		) as f:
 			json.dump({
-				"actions": [{"at": at*1000, "pos": round(pos)} for at,pos in result]
+				"actions": [{"at": int(at*1000), "pos": round(pos)} for at,pos in result]
 			}, f)
 
 loadbtn = Button(text="Load", command=loadfile)
