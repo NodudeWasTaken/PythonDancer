@@ -6,19 +6,14 @@ def load_audio_data(audio_file, hop_length=1024, frame_length=1024):
 	y, sr = librosa.load(audio_file, sr=None, mono=True)
 
 	# Compute beats
-	tempo, beats = librosa.beat.beat_track(y=y, sr=sr, hop_length=hop_length, trim=False, units="time")
+	_, beats = librosa.beat.beat_track(y=y, sr=sr, hop_length=hop_length, trim=False, units="time")
 
 	# Compute energy (RMS)
 	rms = librosa.feature.rms(y=y, frame_length=frame_length, hop_length=hop_length)[0]
 	frames = librosa.frames_to_time(np.arange(len(rms)), sr=sr, hop_length=hop_length)
 
 	# Compute pitch
-	pitches, magnitudes = librosa.piptrack(y=y, sr=sr, hop_length=hop_length, center=True)
-	#TODO: The fuck does this do
-	mean_pitches = np.sum(pitches * magnitudes, axis=0) / np.sum(magnitudes, axis=0)
-
-	rms = np.nan_to_num(rms)
-	mean_pitches = np.nan_to_num(mean_pitches)
+	pitches, _ = librosa.piptrack(y=y, sr=sr, hop_length=hop_length, center=True)
 
 	#Funny segment thing
 	last = 0
@@ -34,10 +29,11 @@ def load_audio_data(audio_file, hop_length=1024, frame_length=1024):
 	splits.append(-1)
 
 	frms = [np.sum(rms[splits[i-1]:splits[i]]) for i in range(len(beats))]
-	fpitch = [np.sum(mean_pitches[splits[i-1]:splits[i]]) for i in range(len(beats))]
+	fpitch = [np.sum(pitches[splits[i-1]:splits[i]]) for i in range(len(beats))]
 
-	#TODO: Nan sometimes
-	fpitch = np.array([max(i,1) for i in fpitch])
+	#Fix divide by zero
+	fpitch = np.fmax(0.01, fpitch)
+	frms = np.fmax(0.01, frms)
 
 	return {
 		"at": librosa.get_duration(y=y, sr=sr, hop_length=hop_length),
