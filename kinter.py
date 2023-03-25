@@ -138,10 +138,9 @@ def loadfile():
 	global data
 	global cur_file
 
+	filename = fd.askopenfile(title='Open a file')
 	if (filename == None):
 		return
-
-	filename = fd.askopenfile(title='Open a file')
 	audio_file = os.path.basename(filename.name)
 	cur_file = audio_file
 	master.title(cur_file)
