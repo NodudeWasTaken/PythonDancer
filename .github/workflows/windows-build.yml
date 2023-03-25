@@ -24,12 +24,6 @@ jobs:
     - name: Build executeable
       run: pyinstaller kinter.spec
 
-    - name: Download FFMpeg
-      run: certutil.exe -urlcache -f https://www.gyan.dev/ffmpeg/builds/ffmpeg-git-essentials.7z ffmpeg.7z
-
-    - name: Unpack FFMpeg
-      run: tar -C ./dist -xvf ffmpeg.7z --strip-components=2 "ffmpeg*/bin/ffmpeg.exe"
-
     - name: Archive production artifacts
       uses: actions/upload-artifact@v3
       with:
