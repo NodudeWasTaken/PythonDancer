@@ -15,6 +15,7 @@ a = Analysis(
 		"librosa.util", 
 		"librosa.util.utils", 
 		"librosa.feature", 
+		"librosa.feature.rhythm", 
 		"librosa.beat", 
 		"librosa.core"
 	],
