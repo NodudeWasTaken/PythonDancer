@@ -1,6 +1,7 @@
 from librosa.core import load, frames_to_time, piptrack, get_duration
 from librosa.feature import rms
 from librosa.beat import beat_track
+from librosa.util.utils import frame as _unused #PyInstaller fix
 import numpy as np
 
 #TODO: Fix action lag that happens sometimes, maybe change hop?
