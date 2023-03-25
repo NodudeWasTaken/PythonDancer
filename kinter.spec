@@ -13,6 +13,7 @@ a = Analysis(
 		"librosa", 
 		"librosa.feature", 
 		"librosa.util", 
+		"librosa.util.utils", 
 		"librosa.feature", 
 		"librosa.beat", 
 		"librosa.core"
