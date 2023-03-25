@@ -21,12 +21,6 @@ jobs:
     - name: Install dependencies
       run: pip install -r requirements.txt --prefer-binary
 
-    - name: Download UPX
-      run: certutil.exe -urlcache -f https://github.com/upx/upx/releases/download/v4.0.2/upx-4.0.2-win64.zip upx.zip
-
-    - name: Unpack UPX
-      run: tar -xvf upx-4.0.2-win64.zip --strip-components=1 "upx*/upx.exe"
-
     - name: Build executeable
       run: pyinstaller kinter.spec
 
