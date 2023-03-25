@@ -21,8 +21,20 @@ jobs:
     - name: Install dependencies
       run: pip install -r requirements.txt --prefer-binary
 
+    - name: Download UPX
+      run: certutil.exe -urlcache -f https://github.com/upx/upx/releases/download/v4.0.2/upx-4.0.2-win64.zip upx.zip
+
+    - name: Unpack UPX
+      run: bsdtar -xvf upx-4.0.2-win64.zip --strip-components=1 "upx*/upx.exe"
+
     - name: Build executeable
       run: pyinstaller kinter.spec
+
+    - name: Download FFMpeg
+      run: certutil.exe -urlcache -f https://www.gyan.dev/ffmpeg/builds/ffmpeg-git-essentials.7z ffmpeg.7z
+
+    - name: Unpack FFMpeg
+      run: bsdtar -C ./dist -xvf ffmpeg.7z --strip-components=2 "ffmpeg*/bin/ffmpeg.exe"
 
     - name: Archive production artifacts
       uses: actions/upload-artifact@v3
