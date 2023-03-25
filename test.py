@@ -1,26 +1,23 @@
-from librosa.core import load, frames_to_time, piptrack, get_duration
-from librosa.feature import rms
-from librosa.beat import beat_track
-from librosa.util.utils import frame as _unused #PyInstaller fix
+import librosa
 import numpy as np
 
 #TODO: Fix action lag that happens sometimes, maybe change hop?
 def load_audio_data(audio_file, hop_length=1024, frame_length=1024):
-	y, sr = load(audio_file, sr=None, mono=True)
+	y, sr = librosa.load(audio_file, sr=None, mono=True)
 
 	# Compute beats
-	tempo, beats = beat_track(y=y, sr=sr, hop_length=hop_length, trim=False, units="time")
+	tempo, beats = librosa.beat.beat_track(y=y, sr=sr, hop_length=hop_length, trim=False, units="time")
 
 	# Compute energy (RMS)
-	_rms = rms(y=y, frame_length=frame_length, hop_length=hop_length)[0]
-	frames = frames_to_time(np.arange(len(_rms)), sr=sr, hop_length=hop_length)
+	rms = librosa.feature.rms(y=y, frame_length=frame_length, hop_length=hop_length)[0]
+	frames = librosa.frames_to_time(np.arange(len(rms)), sr=sr, hop_length=hop_length)
 
 	# Compute pitch
-	pitches, magnitudes = piptrack(y=y, sr=sr, hop_length=hop_length, center=True)
+	pitches, magnitudes = librosa.piptrack(y=y, sr=sr, hop_length=hop_length, center=True)
 	#TODO: The fuck does this do
 	mean_pitches = np.sum(pitches * magnitudes, axis=0) / np.sum(magnitudes, axis=0)
 
-	_rms = np.nan_to_num(_rms)
+	rms = np.nan_to_num(rms)
 	mean_pitches = np.nan_to_num(mean_pitches)
 
 	#Funny segment thing
@@ -36,14 +33,14 @@ def load_audio_data(audio_file, hop_length=1024, frame_length=1024):
 			last += 1
 	splits.append(-1)
 
-	frms = [np.sum(_rms[splits[i-1]:splits[i]]) for i in range(len(beats))]
+	frms = [np.sum(rms[splits[i-1]:splits[i]]) for i in range(len(beats))]
 	fpitch = [np.sum(mean_pitches[splits[i-1]:splits[i]]) for i in range(len(beats))]
 
 	#TODO: Nan sometimes
 	fpitch = np.array([max(i,1) for i in fpitch])
 
 	return {
-		"at": get_duration(y=y, sr=sr, hop_length=hop_length),
+		"at": librosa.get_duration(y=y, sr=sr, hop_length=hop_length),
 		"beats": beats,
 		"pitch": np.log10(fpitch),
 		"energy": frms
