@@ -11,15 +11,15 @@ def load_audio_data(audio_file, hop_length=1024, frame_length=1024):
 	tempo, beats = beat_track(y=y, sr=sr, hop_length=hop_length, trim=False, units="time")
 
 	# Compute energy (RMS)
-	rms = rms(y=y, frame_length=frame_length, hop_length=hop_length)[0]
-	frames = frames_to_time(np.arange(len(rms)), sr=sr, hop_length=hop_length)
+	_rms = rms(y=y, frame_length=frame_length, hop_length=hop_length)[0]
+	frames = frames_to_time(np.arange(len(_rms)), sr=sr, hop_length=hop_length)
 
 	# Compute pitch
 	pitches, magnitudes = piptrack(y=y, sr=sr, hop_length=hop_length, center=True)
 	#TODO: The fuck does this do
 	mean_pitches = np.sum(pitches * magnitudes, axis=0) / np.sum(magnitudes, axis=0)
 
-	rms = np.nan_to_num(rms)
+	_rms = np.nan_to_num(_rms)
 	mean_pitches = np.nan_to_num(mean_pitches)
 
 	#Funny segment thing
@@ -35,7 +35,7 @@ def load_audio_data(audio_file, hop_length=1024, frame_length=1024):
 			last += 1
 	splits.append(-1)
 
-	frms = [np.sum(rms[splits[i-1]:splits[i]]) for i in range(len(beats))]
+	frms = [np.sum(_rms[splits[i-1]:splits[i]]) for i in range(len(beats))]
 	fpitch = [np.sum(mean_pitches[splits[i-1]:splits[i]]) for i in range(len(beats))]
 
 	#TODO: Nan sometimes
