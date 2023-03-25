@@ -17,7 +17,7 @@ a = Analysis(
 		"librosa.beat", 
 		"librosa.core"
 	],
-	hookspath=[],
+	hookspath=["extra-hooks"],
 	hooksconfig={},
 	runtime_hooks=[],
 	excludes=[],
