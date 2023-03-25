@@ -74,7 +74,7 @@ def _res():
 			points = np.array([X, Y]).T.reshape(-1, 1, 2)
 			segments = np.concatenate([points[:-1], points[1:]], axis=1)
 
-			colors = [my_cmap(speed((X[i-1], Y[i-1]), (X[i], Y[i]))) for i in range(1,len(Y))]
+			colors = np.array([my_cmap(speed((X[i-1], Y[i-1]), (X[i], Y[i]))) for i in range(1,len(Y))])
 
 			lc = LineCollection(segments, colors=colors, linewidths=.5)
 			plot2.add_collection(lc)
@@ -137,6 +137,9 @@ cur_file = None
 def loadfile():
 	global data
 	global cur_file
+
+	if (filename == None):
+		return
 
 	filename = fd.askopenfile(title='Open a file')
 	audio_file = os.path.basename(filename.name)
