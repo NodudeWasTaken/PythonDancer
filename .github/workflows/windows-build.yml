@@ -19,10 +19,10 @@ jobs:
         python-version: '3.8'
 
     - name: Create venv
-      run: python -m venv buildenv
+      run: python -m venv env
 
     - name: Enter venv
-      run: buildenv\\Scripts\\activate.bat
+      run: .\env\Scripts\activate
 
     - name: Install requirements
       run: pip install -r requirements.txt --prefer-binary
