@@ -141,9 +141,9 @@ def loadfile():
 	filename = fd.askopenfile(title='Open a file')
 	if (filename == None):
 		return
+	data = None
 	audio_file = os.path.basename(filename.name)
 	cur_file = audio_file
-	master.title(cur_file)
 	audio_file = os.path.splitext(audio_file)[0] + ".wav"
 	audio_file = os.path.join("tmp", audio_file)
 
@@ -152,17 +152,23 @@ def loadfile():
 	except:
 		pass
 
-	subprocess.check_call([
-		"ffmpeg",
-		"-y",
-		"-i", filename.name,
-		"-ar", "48000",
-		audio_file
-	])
+	try:
+		subprocess.check_call([
+			"ffmpeg",
+			"-y",
+			"-i", filename.name,
+			"-ar", "48000",
+			audio_file
+		])
 
-	data = load_audio_data(audio_file)
-	res()
-	ree()
+		data = load_audio_data(audio_file)
+		master.title(cur_file)
+	except Exception as ex:
+		print(ex)
+		master.title("Error")
+	finally:
+		res()
+		ree()
 
 def savefile():
 	with fd.asksaveasfile(
