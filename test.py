@@ -16,8 +16,9 @@ def load_audio_data(audio_file, hop_length=1024, frame_length=1024):
 	pitches, magnitudes = librosa.piptrack(y=y, sr=sr, hop_length=hop_length, center=True)
 
 	#TODO: The fuck does this do
-	pitches = np.sum(pitches * magnitudes, axis=0) / np.sum(magnitudes, axis=0)
 	pitches = np.fmax(0.01, pitches)
+	magnitudes = np.fmax(0.01, magnitudes)
+	pitches = np.sum(pitches * magnitudes, axis=0) / np.sum(magnitudes, axis=0)
 
 	#Funny segment thing
 	last = 0
