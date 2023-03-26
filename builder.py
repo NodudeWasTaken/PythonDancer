@@ -1,9 +1,7 @@
-os.system("pip install requests")
 import requests
 import io
 import shutil
 import os
-
 import zipfile
 
 print("Download UPX")
@@ -17,9 +15,6 @@ with requests.get("https://github.com/upx/upx/releases/download/v4.0.2/upx-4.0.2
 						break
 
 print("Building")
-os.system("python -m venv buildenv")
-os.system("buildenv\\Scripts\\activate.bat")
-os.system("pip install -r requirements.txt --prefer-binary")
 os.system("pyinstaller kinter.spec")
 
 print("Download FFMpeg")
