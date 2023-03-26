@@ -171,7 +171,23 @@ def savefile():
 		filetypes=[("Funscript", ".funscript")]
 		) as f:
 			json.dump({
-				"actions": [{"at": int(at*1000), "pos": round(pos)} for at,pos in result]
+				"actions": [{"at": int(at*1000), "pos": round(pos)} for at,pos in result],
+				"inverted": False,
+				"metadata": {
+					"creator": "PythonDancer",
+					"description": "A FunscriptDancer implementation in Python",
+					"duration": int(result[-1][0]),
+					"license": "None",
+					"notes": "",
+					"performers": [],
+					"script_url": "",
+					"tags": [],
+					"title": "",
+					"type": "basic",
+					"video_url": "",
+				},
+				"range": 100,
+				"version": "1.0",
 			}, f)
 
 loadbtn = Button(text="Load", command=loadfile)
