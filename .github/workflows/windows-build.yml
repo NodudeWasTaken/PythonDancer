@@ -22,7 +22,7 @@ jobs:
       run: pip install -r requirements.txt --prefer-binary
 
     - name: Build executeable
-      run: pyinstaller kinter.spec
+      run: python builder.py
 
     - name: Archive production artifacts
       uses: actions/upload-artifact@v3
