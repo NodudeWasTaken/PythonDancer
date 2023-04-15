@@ -1,7 +1,7 @@
 #Welcome to ugly piece of shit gui 1.0!
 from tkinter import *
 from tkinter import filedialog as fd
-from matplotlib import cm
+import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap, ListedColormap, BoundaryNorm
 from matplotlib.collections import LineCollection
@@ -17,7 +17,6 @@ plt.style.use(["ggplot", "dark_background", "fast"])
 
 data = None
 heatmap = True
-delay = False
 
 def ree():
 	global data
@@ -51,12 +50,10 @@ def speed(A,B):
 
 result = []
 my_cmap = LinearSegmentedColormap.from_list("intensity",["w", "g", "orange", "r"], N=256)
-def _res():
+def res():
 	global result
 	global data
 	global heatmap
-	global task
-	global cancl
 
 	if data != None:
 		result = create_actions(
@@ -84,23 +81,6 @@ def _res():
 
 	canvas2.draw()
 	plot2.clear()
-	task = None
-	cancl = 0
-
-task = None
-cancl = 0
-def res():
-	global task
-	global delay
-	global cancl
-
-	if (delay):
-		if (task != None):
-			master.after_cancel(task)
-			cancl += 1
-		task = master.after(max(1, 220 - 2*cancl), _res)
-	else:
-		_res()
 
 if True:
 	# the figure that will contain the plot
@@ -181,7 +161,7 @@ def savefile():
 				"inverted": False,
 				"metadata": {
 					"creator": "PythonDancer",
-					"description": "A FunscriptDancer implementation in Python",
+					"description": "",
 					"duration": int(result[-1][0]),
 					"license": "None",
 					"notes": "",
@@ -209,12 +189,5 @@ var1 = BooleanVar(value=True)
 c1 = Checkbutton(text='Heatmapping',variable=var1, onvalue=True, offvalue=False, command=asd)
 c1.pack(side=LEFT)
 
-def asc():
-	global delay
-	delay=var2.get()
-	res()
-var2 = BooleanVar(value=False)
-c2 = Checkbutton(text='Delay render',variable=var2, onvalue=True, offvalue=False, command=asc)
-c2.pack(side=LEFT)
-
-mainloop()
+if __name__ == "__main__":
+	mainloop()
