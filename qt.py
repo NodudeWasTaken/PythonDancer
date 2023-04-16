@@ -41,13 +41,13 @@ def ffmpeg_check():
 									shutil.copyfileobj(zf, f)
 									break
 			print("Downloaded!")
-		elif (os.name in ["linux"]):
+		elif (sys.platform in ["linux"]):
 			print("Please install ffmpeg using your package manager!")
 			print("Suggestions:")
 			print("Ubuntu/Debian: sudo apt install ffmpeg")
 			print("Arch/Manjaro: sudo pacman -S ffmpeg")
 			sys.exit(1)
-		elif (os.name in ["darwin"]):
+		elif (sys.platform in ["darwin"]):
 			print("Please install ffmpeg using your package manager!")
 			print("Suggestions:")
 			print("Homebrew: brew install ffmpeg")
