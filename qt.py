@@ -1,18 +1,19 @@
 import sys
+import json
+from pathlib import Path
+import subprocess
+
 import PyQt5.QtWidgets as QtWidgets
 from PyQt5 import uic
 from PyQt5 import QtGui, QtCore
-from pathlib import Path
-import subprocess
+
+import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 from matplotlib.collections import LineCollection
 from matplotlib.colors import LinearSegmentedColormap
 from matplotlib.figure import Figure
-#from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
-from PIL import Image
-import numpy as np
 
 from libfun import load_audio_data, create_actions
 
@@ -63,7 +64,7 @@ class LoadWorker(ImageWorker):
 
 		#TODO: Better progressbar
 
-		if (self.fileName):
+		if (isinstance(self.fileName, Path)):
 			audioFile = Path("tmp", self.fileName.name)
 			audioFile.parent.mkdir(parents=True, exist_ok=True)
 
@@ -96,7 +97,7 @@ class LoadWorker(ImageWorker):
 
 
 class RenderWorker(ImageWorker):
-	done = QtCore.pyqtSignal(QtGui.QPixmap)
+	done = QtCore.pyqtSignal(list, QtGui.QPixmap)
 	my_cmap = LinearSegmentedColormap.from_list("intensity",["w", "g", "orange", "r"], N=256)
 
 	def __init__(self, size, data, energy_mult, pitch_offset, overflow, heatmap=True):
@@ -114,6 +115,7 @@ class RenderWorker(ImageWorker):
 
 	def run(self):
 		self.pre()
+		result = []
 
 		if len(self.data) > 0:
 			self.progressed.emit(5)
@@ -142,7 +144,7 @@ class RenderWorker(ImageWorker):
 
 		self.post()
 
-		self.done.emit(self.img)
+		self.done.emit(result, self.img)
 		self.finished.emit()
 
 class MainUi(QtWidgets.QMainWindow):
@@ -154,6 +156,7 @@ class MainUi(QtWidgets.QMainWindow):
 		self.OOR = 0
 		self.fileName = None
 		self.data = {}
+		self.result = None
 
 		self.babout = self.findChild(QtWidgets.QToolButton, "aboutButton")
 		self.bload = self.findChild(QtWidgets.QToolButton, "mediaButton")
@@ -220,7 +223,7 @@ class MainUi(QtWidgets.QMainWindow):
 		self.OOR = 2
 		self.RenderWorker()
 
-	# TODO: Generalize these
+	# TODO: Generalize these, there is no reason to do boilerplate code twice
 	def __load_done(self, data, img):
 		self.data = data
 		self.RenderWorker()
@@ -231,17 +234,16 @@ class MainUi(QtWidgets.QMainWindow):
 	def __load_prog(self, val):
 		self.pbat.setValue(val)
 
-	def __load_thread(self):
+	def __load_thread(self, fileName=None):
 		thread = QtCore.QThread()
 		worker = LoadWorker(
 			(
 				self.ginput.width(),
 				self.ginput.height()
 			),
-			self.fileName,
+			fileName,
 			self.data
 		)
-		self.fileName = None
 		worker.moveToThread(thread)
 
 		# this is essential when worker is in local scope!
@@ -254,12 +256,13 @@ class MainUi(QtWidgets.QMainWindow):
 
 		return thread
 
-	def LoadWorker(self):
+	def LoadWorker(self, fileName=None):
 		if not self.__loadworker.isRunning():
-			self.__loadworker = self.__load_thread()
+			self.__loadworker = self.__load_thread(fileName)
 			self.__loadworker.start()
 
-	def __render_done(self, img):
+	def __render_done(self, result, img):
+		self.result = result
 		self.gsoutput.clear()
 		gfxPixItem = self.gsoutput.addPixmap(img)
 		self.goutput.fitInView(gfxPixItem)
@@ -298,15 +301,41 @@ class MainUi(QtWidgets.QMainWindow):
 
 	def bloadPressed(self):
 		options = QtWidgets.QFileDialog.Options()
-		options |= QtWidgets.QFileDialog.DontUseNativeDialog
-		fileName, _ = QtWidgets.QFileDialog.getOpenFileName(self,"QFileDialog.getOpenFileName()", "","All Files (*);;Python Files (*.py)", options=options)
+		#options |= QtWidgets.QFileDialog.DontUseNativeDialog
+		fileName, _ = QtWidgets.QFileDialog.getOpenFileName(self,"QFileDialog.getOpenFileName()", "","All Files (*);", options=options)
 		if fileName:
 			self.fileName = Path(fileName)
 			self.setWindowTitle(f"Video: {self.fileName.name}")
-			self.LoadWorker()
+			self.LoadWorker(self.fileName)
 
 	def bfunscriptPressed(self):
-		print("bfunscriptPressed")
+		if (not self.result):
+			return
+
+		options = QtWidgets.QFileDialog.Options()
+		#options |= QtWidgets.QFileDialog.DontUseNativeDialog
+		fileName, _ = QtWidgets.QFileDialog.getSaveFileName(self,"QFileDialog.getSaveFileName()", self.fileName.stem, "Funscript Files (*.funscript)", options=options)
+		if fileName:
+			with open(fileName, "w") as f:
+				json.dump({
+					"actions": [{"at": int(at*1000), "pos": round(pos)} for at,pos in self.result],
+					"inverted": False,
+					"metadata": {
+						"creator": "PythonDancer",
+						"description": "",
+						"duration": int(self.result[-1][0]),
+						"license": "None",
+						"notes": "",
+						"performers": [],
+						"script_url": "",
+						"tags": [],
+						"title": "",
+						"type": "basic",
+						"video_url": "",
+					},
+					"range": 100,
+					"version": "1.0",
+				}, f)
 
 	def bheatmapPressed(self):
 		print("bheatmapPressed")
