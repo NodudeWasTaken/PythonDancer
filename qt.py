@@ -306,6 +306,10 @@ class MainUi(QtWidgets.QMainWindow):
 
 		return thread
 
+	#TODO: This is okay for the LoadWorker
+	# But in this one we should rather keep an eye on the latest value
+	# and display it.
+	# We should avoid multiple render threads
 	def RenderWorker(self):
 		if not self.__renderworker.isRunning():
 			self.__renderworker = self.__render_thread()
