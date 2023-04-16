@@ -1,4 +1,4 @@
-import sys
+import sys, os
 import json
 from pathlib import Path
 import subprocess
@@ -83,7 +83,6 @@ class LoadWorker(ImageWorker):
 
 			self.progressed.emit(50)
 
-
 		if len(self.data) > 0:
 			# plotting the graph
 			self.plot.plot(self.data["pitch"], label="pitch", linewidth=.3)
@@ -147,12 +146,25 @@ class RenderWorker(ImageWorker):
 		self.done.emit(result, self.img)
 		self.finished.emit()
 
+# Define function to import external files when using PyInstaller.
+# https://stackoverflow.com/a/37920111
+def resource_path(relative_path):
+	""" Get absolute path to resource, works for dev and for PyInstaller """
+	try:
+		# PyInstaller creates a temp folder and stores path in _MEIPASS
+		base_path = sys._MEIPASS
+	except Exception:
+		base_path = os.path.abspath(".")
+
+	return os.path.join(base_path, relative_path)
+
+uiForm = resource_path("dancerUI.ui")
 class MainUi(QtWidgets.QMainWindow):
 	resized = QtCore.pyqtSignal()
 
 	def __init__(self):
 		super(MainUi, self).__init__()
-		uic.loadUi("dancerUI.ui", self)
+		uic.loadUi(uiForm, self)
 		self.OOR = 0
 		self.fileName = None
 		self.data = {}
