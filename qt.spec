@@ -5,7 +5,7 @@ block_cipher = None
 
 
 a = Analysis(
-	['kinter.py'],
+	['qt.py'],
 	pathex=[],
 	binaries=[],
 	datas=[],
