@@ -81,7 +81,7 @@
          <item>
           <layout class="QVBoxLayout" name="verticalLayout_3">
            <item>
-            <widget class="PlotWidget" name="audioInput">
+            <widget class="QGraphicsView" name="audioInput">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                <horstretch>0</horstretch>
@@ -91,7 +91,7 @@
             </widget>
            </item>
            <item>
-            <widget class="PlotWidget" name="audioOutput">
+            <widget class="QGraphicsView" name="audioOutput">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                <horstretch>0</horstretch>

@@ -15,7 +15,7 @@ with requests.get("https://github.com/upx/upx/releases/download/v4.0.2/upx-4.0.2
 						break
 
 print("Building")
-os.system("pyinstaller kinter.spec")
+os.system("pyinstaller qt.spec")
 
 print("Download FFMpeg")
 with requests.get("https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip") as r:
