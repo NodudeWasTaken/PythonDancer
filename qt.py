@@ -64,7 +64,7 @@ class LoadWorker(ImageWorker):
 		#TODO: Better progressbar
 
 		if (isinstance(self.fileName, Path)):
-			audioFile = Path("tmp", self.fileName.name)
+			audioFile = Path("tmp", self.fileName.with_suffix(".wav").name)
 			audioFile.parent.mkdir(parents=True, exist_ok=True)
 
 			# TODO: Try catch
