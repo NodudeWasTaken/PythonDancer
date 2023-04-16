@@ -32,14 +32,14 @@ def ree():
 
 if True:
 	# the figure that will contain the plot
-	fig1 = Figure(figsize = (11, 3), dpi = 150)
+	fig1 = Figure(figsize=(11, 3), dpi=150, tight_layout=True)
 
 	# adding the subplot
 	plot1 = fig1.add_subplot(111)
 
 	# creating the Tkinter canvas
 	# containing the Matplotlib figure
-	canvas1 = FigureCanvasTkAgg(fig1, master = master)  
+	canvas1 = FigureCanvasTkAgg(fig1, master=master)  
 	canvas1.draw()
 
 	# placing the canvas on the Tkinter window
@@ -84,14 +84,14 @@ def res():
 
 if True:
 	# the figure that will contain the plot
-	fig2 = Figure(figsize = (11, 3), dpi = 150)
+	fig2 = Figure(figsize=(11,3), dpi=150, tight_layout=True)
 
 	# adding the subplot
 	plot2 = fig2.add_subplot(111)
 
 	# creating the Tkinter canvas
 	# containing the Matplotlib figure
-	canvas2 = FigureCanvasTkAgg(fig2, master = master)
+	canvas2 = FigureCanvasTkAgg(fig2, master=master)
 	canvas2.draw()
 
 	# placing the canvas on the Tkinter window
