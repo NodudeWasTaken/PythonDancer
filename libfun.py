@@ -135,10 +135,9 @@ def create_actions(data, energy_multiplier=1, pitch_range=100, overflow=0):
 	data["energy_to_pos"] = np.array([i * energy_multiplier * 50 for i in normalize(data["energy"])])
 	return create_actions_barrier(data, overflow=overflow)
 
-def dump_csv(data):
-	with open("test.csv", "w") as f:
-		for at, pos in data:
-			f.write(f"{at*1000},{round(pos)}\n")
+def dump_csv(f, data):
+	for at, pos in data:
+		f.write(f"{at*1000},{round(pos)}\n")
 
 def dump_funscript(f, data):
 	return dump({
@@ -162,4 +161,5 @@ def dump_funscript(f, data):
 	}, f)
 
 if __name__ == "__main__":
-	dump_csv(create_actions(load_audio_data("STAR.wav"), energy_multiplier=2))
+	with open("test.csv", "w") as f:
+		dump_csv(f, create_actions(load_audio_data("STAR.wav"), energy_multiplier=2))

@@ -72,6 +72,7 @@ class LoadWorker(ImageWorker):
 				"ffmpeg",
 				"-y",
 				"-i", self.fileName,
+				"-map", "0:a",
 				"-ar", "48000",
 				audioFile
 			])
