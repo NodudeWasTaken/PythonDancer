@@ -37,7 +37,7 @@ class MainUi(QtWidgets.QMainWindow):
 		self.senergy = self.findChild(QtWidgets.QSlider, "energySlider")
 		self.spitch.setRange(-200,200)
 		self.spitch.setValue(100)
-		self.senergy.setRange(0,10)
+		self.senergy.setRange(0.0,10.0)
 		self.senergy.setValue(1)
 		self.spitch.sliderReleased.connect(self.draw_fun)
 		self.senergy.sliderReleased.connect(self.draw_fun)
@@ -46,8 +46,6 @@ class MainUi(QtWidgets.QMainWindow):
 		self.bheatmap = self.findChild(QtWidgets.QPushButton, "heatmapButton")
 		self.bfunscript.clicked.connect(self.bfunscriptPressed)
 		self.bheatmap.clicked.connect(self.bheatmapPressed)
-
-		self.show()
 
 	def speed(self,A,B):
 		return (abs(B[1] - A[1]) / abs(B[0] - A[0])) / 500
@@ -117,7 +115,8 @@ class MainUi(QtWidgets.QMainWindow):
 
 		self.goutput.clear()
 
-		cm = pg.colormap.get("CET-L9")
+		# https://colorcet.holoviz.org/
+		cm = pg.colormap.get("CET-L3")
 		pen = pg.mkPen(QtGui.QColor(255, 0, 0), width=0.5)
 		for i in range(len(self.result)-1):
 			A,B = self.result[i], self.result[i+1]
@@ -133,4 +132,5 @@ class MainUi(QtWidgets.QMainWindow):
 if __name__ == "__main__":
 	app = QtWidgets.QApplication(sys.argv)
 	window = MainUi()
-	app.exec_()
+	window.show()
+	sys.exit(app.exec_())
