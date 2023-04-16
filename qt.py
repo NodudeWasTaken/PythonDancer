@@ -1,5 +1,4 @@
 import sys, os
-import json
 from pathlib import Path
 import subprocess
 
@@ -15,7 +14,7 @@ from matplotlib.colors import LinearSegmentedColormap
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 
-from libfun import load_audio_data, create_actions
+from libfun import load_audio_data, create_actions, dump_funscript
 
 plt.style.use(["ggplot", "dark_background", "fast"])
 
@@ -141,6 +140,8 @@ class RenderWorker(ImageWorker):
 			else:
 				self.plot.plot(X,Y, linewidth=.5)
 
+		self.plot.set_ylim(0,100)
+
 		self.post()
 
 		self.done.emit(result, self.img)
@@ -221,7 +222,7 @@ class MainUi(QtWidgets.QMainWindow):
 		return super(MainUi, self).resizeEvent(event)
 
 	def baboutPressed(self):
-		print("baboutPressed")
+		QtWidgets.QMessageBox.about(self, "TODO", "About not implemented!")
 
 	def bbouncePressed(self):
 		self.OOR = 1
@@ -268,6 +269,8 @@ class MainUi(QtWidgets.QMainWindow):
 
 		return thread
 
+	#TODO: Disable load button while loading
+	# Better implement error handling first though
 	def LoadWorker(self, fileName=None):
 		if not self.__loadworker.isRunning():
 			self.__loadworker = self.__load_thread(fileName)
@@ -290,7 +293,7 @@ class MainUi(QtWidgets.QMainWindow):
 				self.goutput.height()
 			),
 			self.data,
-			self.senergy.value()/10,
+			self.senergy.value() / 10.0,
 			self.spitch.value(),
 			self.OOR
 		)
@@ -318,7 +321,13 @@ class MainUi(QtWidgets.QMainWindow):
 	def bloadPressed(self):
 		options = QtWidgets.QFileDialog.Options()
 		#options |= QtWidgets.QFileDialog.DontUseNativeDialog
-		fileName, _ = QtWidgets.QFileDialog.getOpenFileName(self,"QFileDialog.getOpenFileName()", "","All Files (*);", options=options)
+		fileName, _ = QtWidgets.QFileDialog.getOpenFileName(
+			self,
+			"Open a media file", 
+			"",
+			"Media Files (*);", 
+			options=options
+		)
 		if fileName:
 			self.fileName = Path(fileName)
 			self.setWindowTitle(f"Video: {self.fileName.name}")
@@ -330,31 +339,19 @@ class MainUi(QtWidgets.QMainWindow):
 
 		options = QtWidgets.QFileDialog.Options()
 		#options |= QtWidgets.QFileDialog.DontUseNativeDialog
-		fileName, _ = QtWidgets.QFileDialog.getSaveFileName(self,"QFileDialog.getSaveFileName()", self.fileName.stem, "Funscript Files (*.funscript)", options=options)
+		fileName, _ = QtWidgets.QFileDialog.getSaveFileName(
+			self,
+			"Save a funscript", 
+			str(self.fileName.with_suffix(".funscript").resolve()), 
+			"Funscript Files (*.funscript)", 
+			options=options
+		)
 		if fileName:
 			with open(fileName, "w") as f:
-				json.dump({
-					"actions": [{"at": int(at*1000), "pos": round(pos)} for at,pos in self.result],
-					"inverted": False,
-					"metadata": {
-						"creator": "PythonDancer",
-						"description": "",
-						"duration": int(self.result[-1][0]),
-						"license": "None",
-						"notes": "",
-						"performers": [],
-						"script_url": "",
-						"tags": [],
-						"title": "",
-						"type": "basic",
-						"video_url": "",
-					},
-					"range": 100,
-					"version": "1.0",
-				}, f)
+				dump_funscript(f, self.result)
 
 	def bheatmapPressed(self):
-		print("bheatmapPressed")
+		QtWidgets.QMessageBox.about(self, "TODO", "Heatmap not implemented!")
 
 if __name__ == "__main__":
 	app = QtWidgets.QApplication(sys.argv)

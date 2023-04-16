@@ -1,5 +1,6 @@
 import librosa
 import numpy as np
+from json import dump
 
 #TODO: Fix action lag that happens sometimes, maybe change hop?
 def load_audio_data(audio_file, hop_length=1024, frame_length=1024):
@@ -138,6 +139,27 @@ def dump_csv(data):
 	with open("test.csv", "w") as f:
 		for at, pos in data:
 			f.write(f"{at*1000},{round(pos)}\n")
+
+def dump_funscript(f, data):
+	return dump({
+		"actions": [{"at": int(at*1000), "pos": round(pos)} for at,pos in data],
+		"inverted": False,
+		"metadata": {
+			"creator": "PythonDancer",
+			"description": "",
+			"duration": int(data[-1][0]),
+			"license": "None",
+			"notes": "",
+			"performers": [],
+			"script_url": "",
+			"tags": [],
+			"title": "",
+			"type": "basic",
+			"video_url": "",
+		},
+		"range": 100,
+		"version": "1.0",
+	}, f)
 
 if __name__ == "__main__":
 	dump_csv(create_actions(load_audio_data("STAR.wav"), energy_multiplier=2))
