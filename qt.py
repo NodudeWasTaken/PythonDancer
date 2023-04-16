@@ -1,6 +1,9 @@
+import io
+import shutil
 import sys, os
 from pathlib import Path
 import subprocess
+from zipfile import ZipFile
 
 import PyQt5.QtWidgets as QtWidgets
 from PyQt5 import uic
@@ -13,10 +16,45 @@ from matplotlib.collections import LineCollection
 from matplotlib.colors import LinearSegmentedColormap
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
+import requests
 
 from libfun import load_audio_data, create_actions, dump_funscript
 
 plt.style.use(["ggplot", "dark_background", "fast"])
+
+def ffmpeg_check():
+	try:
+		subprocess.check_call([
+			"ffmpeg","-version"
+		])
+	except FileNotFoundError:
+		#TODO: Status messages in UI
+		print("FFMpeg was missing")
+		if (sys.platform in ["win32","cygwin","msys"]):
+			print("Downloading now...")
+			with requests.get("https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip") as r:
+				with ZipFile(io.BytesIO(r.content)) as z:
+					for file in z.infolist():
+						if ("ffmpeg.exe" in file.filename):
+							with z.open(file.filename) as zf:
+								with open("ffmpeg.exe", "wb") as f:
+									shutil.copyfileobj(zf, f)
+									break
+			print("Downloaded!")
+		elif (os.name in ["linux"]):
+			print("Please install ffmpeg using your package manager!")
+			print("Suggestions:")
+			print("Ubuntu/Debian: sudo apt install ffmpeg")
+			print("Arch/Manjaro: sudo pacman -S ffmpeg")
+			sys.exit(1)
+		elif (os.name in ["darwin"]):
+			print("Please install ffmpeg using your package manager!")
+			print("Suggestions:")
+			print("Homebrew: brew install ffmpeg")
+			sys.exit(1)
+		else:
+			print("Please install ffmpeg!")
+			sys.exit(1)
 
 class ImageWorker(QtCore.QObject):
 	progressed = QtCore.pyqtSignal(int)
@@ -67,6 +105,8 @@ class LoadWorker(ImageWorker):
 			audioFile = Path("tmp", self.fileName.with_suffix(".wav").name)
 			audioFile.parent.mkdir(parents=True, exist_ok=True)
 
+			ffmpeg_check()
+
 			# TODO: Try catch
 			subprocess.check_call([
 				"ffmpeg",
@@ -85,8 +125,8 @@ class LoadWorker(ImageWorker):
 
 		if len(self.data) > 0:
 			# plotting the graph
-			self.plot.plot(self.data["pitch"], label="pitch", linewidth=.3)
-			self.plot.plot(self.data["energy"], label="energy", linewidth=.3)
+			self.plot.plot(self.data["pitch"], label="pitch", linewidth=.5)
+			self.plot.plot(self.data["energy"], label="energy", linewidth=.5)
 			self.plot.legend()
 
 		self.post()
@@ -223,7 +263,7 @@ class MainUi(QtWidgets.QMainWindow):
 		return super(MainUi, self).resizeEvent(event)
 
 	def baboutPressed(self):
-		QtWidgets.QMessageBox.about(self, "TODO", "About not implemented!")
+		QtWidgets.QMessageBox.about(self, "80085", "Not Implemented!")
 
 	def bbouncePressed(self):
 		self.OOR = 1
@@ -352,7 +392,7 @@ class MainUi(QtWidgets.QMainWindow):
 				dump_funscript(f, self.result)
 
 	def bheatmapPressed(self):
-		QtWidgets.QMessageBox.about(self, "TODO", "Heatmap not implemented!")
+		QtWidgets.QMessageBox.about(self, "80085", "Not Implemented!")
 
 if __name__ == "__main__":
 	app = QtWidgets.QApplication(sys.argv)
