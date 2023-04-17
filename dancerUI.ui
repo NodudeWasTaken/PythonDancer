@@ -160,7 +160,7 @@
           </layout>
          </item>
          <item>
-          <widget class="QGroupBox" name="c_groupBox_2">
+          <widget class="QGroupBox" name="groupBox_4">
            <property name="sizePolicy">
             <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
              <horstretch>0</horstretch>
@@ -168,50 +168,81 @@
             </sizepolicy>
            </property>
            <property name="title">
-            <string>Out of range</string>
+            <string>Options</string>
            </property>
-           <widget class="QRadioButton" name="cropButton">
-            <property name="geometry">
-             <rect>
-              <x>11</x>
-              <y>24</y>
-              <width>46</width>
-              <height>18</height>
-             </rect>
-            </property>
-            <property name="text">
-             <string>Crop</string>
-            </property>
-            <property name="checked">
-             <bool>true</bool>
-            </property>
-           </widget>
-           <widget class="QRadioButton" name="foldButton">
-            <property name="geometry">
-             <rect>
-              <x>11</x>
-              <y>72</y>
-              <width>44</width>
-              <height>18</height>
-             </rect>
-            </property>
-            <property name="text">
-             <string>Fold</string>
-            </property>
-           </widget>
-           <widget class="QRadioButton" name="bounceButton">
-            <property name="geometry">
-             <rect>
-              <x>11</x>
-              <y>48</y>
-              <width>59</width>
-              <height>18</height>
-             </rect>
-            </property>
-            <property name="text">
-             <string>Bounce</string>
-            </property>
-           </widget>
+           <layout class="QHBoxLayout" name="horizontalLayout_9">
+            <item>
+             <widget class="QGroupBox" name="c_groupBox_2">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="title">
+               <string>Out of range</string>
+              </property>
+              <layout class="QVBoxLayout" name="verticalLayout_5">
+               <item>
+                <widget class="QRadioButton" name="cropButton">
+                 <property name="text">
+                  <string>Crop</string>
+                 </property>
+                 <property name="checked">
+                  <bool>true</bool>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QRadioButton" name="bounceButton">
+                 <property name="text">
+                  <string>Bounce</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QRadioButton" name="foldButton">
+                 <property name="text">
+                  <string>Fold</string>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item>
+             <widget class="QGroupBox" name="groupBox_5">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="title">
+               <string>Misc</string>
+              </property>
+              <layout class="QVBoxLayout" name="verticalLayout">
+               <item>
+                <widget class="QCheckBox" name="heatOpt">
+                 <property name="text">
+                  <string>Heatmap</string>
+                 </property>
+                 <property name="checked">
+                  <bool>true</bool>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QCheckBox" name="plpOpt">
+                 <property name="text">
+                  <string>PLP estimation</string>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </widget>
+            </item>
+           </layout>
           </widget>
          </item>
         </layout>
@@ -262,13 +293,6 @@
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
  </widget>
- <customwidgets>
-  <customwidget>
-   <class>PlotWidget</class>
-   <extends>QGraphicsView</extends>
-   <header>pyqtgraph</header>
-  </customwidget>
- </customwidgets>
  <resources/>
  <connections/>
 </ui>
