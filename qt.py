@@ -87,12 +87,13 @@ class ImageWorker(QtCore.QObject):
 class LoadWorker(ImageWorker):
 	done = QtCore.pyqtSignal(dict, QtGui.QPixmap)
 
-	def __init__(self, size, fileName, data):
+	def __init__(self, size, fileName, data, plp):
 		super().__init__()
 		self.w = size[0]
 		self.h = size[1]
 		self.fileName = fileName
 		self.data = data
+		self.plp = plp
 
 	def run(self):
 		self.progressed.emit(5)
@@ -108,18 +109,19 @@ class LoadWorker(ImageWorker):
 			ffmpeg_check()
 
 			# TODO: Try catch
-			subprocess.check_call([
-				"ffmpeg",
-				"-y",
-				"-i", self.fileName,
-				"-map", "0:a",
-				"-ar", "48000",
-				audioFile
-			])
+			if (len(self.data) <= 0):
+				subprocess.check_call([
+					"ffmpeg",
+					"-y",
+					"-i", self.fileName,
+					"-map", "0:a",
+					"-ar", "48000",
+					audioFile
+				])
 
-			self.progressed.emit(20)
+				self.progressed.emit(20)
 
-			self.data = load_audio_data(audioFile)
+			self.data = load_audio_data(audioFile, plp=self.plp)
 
 			self.progressed.emit(50)
 
@@ -139,7 +141,7 @@ class RenderWorker(ImageWorker):
 	done = QtCore.pyqtSignal(list, QtGui.QPixmap)
 	my_cmap = LinearSegmentedColormap.from_list("intensity",["w", "g", "orange", "r"], N=256)
 
-	def __init__(self, size, data, energy_mult, pitch_offset, overflow, heatmap=True):
+	def __init__(self, size, data, energy_mult, pitch_offset, overflow, heatmap):
 		super().__init__()
 		self.w = size[0]
 		self.h = size[1]
@@ -182,6 +184,8 @@ class RenderWorker(ImageWorker):
 				self.plot.plot(X,Y, linewidth=.5)
 
 		self.plot.set_ylim(0,100)
+		if ("at" in self.data):
+			self.plot.set_xlim(0,self.data["at"])
 
 		self.post()
 
@@ -211,6 +215,8 @@ class MainUi(QtWidgets.QMainWindow):
 		self.fileName = None
 		self.data = {}
 		self.result = None
+		self.heatmap = True
+		self.plp = False
 
 		self.babout = self.findChild(QtWidgets.QToolButton, "aboutButton")
 		self.bload = self.findChild(QtWidgets.QToolButton, "mediaButton")
@@ -236,6 +242,11 @@ class MainUi(QtWidgets.QMainWindow):
 		self.bbounce.clicked.connect(self.bbouncePressed)
 		self.bcrop.clicked.connect(self.bcropPressed)
 		self.bfold.clicked.connect(self.bfoldPressed)
+
+		self.cheat = self.findChild(QtWidgets.QCheckBox, "heatOpt")
+		self.cheat.clicked.connect(self.cheatPressed)
+		self.cplp = self.findChild(QtWidgets.QCheckBox, "plpOpt")
+		self.cplp.clicked.connect(self.cplpPressed)
 
 		self.spitch = self.findChild(QtWidgets.QSlider, "pitchSlider")
 		self.senergy = self.findChild(QtWidgets.QSlider, "energySlider")
@@ -296,7 +307,8 @@ class MainUi(QtWidgets.QMainWindow):
 				self.ginput.height()
 			),
 			fileName,
-			self.data
+			self.data,
+			self.plp
 		)
 		worker.moveToThread(thread)
 
@@ -336,7 +348,8 @@ class MainUi(QtWidgets.QMainWindow):
 			self.data,
 			self.senergy.value() / 10.0,
 			self.spitch.value(),
-			self.OOR
+			self.OOR,
+			self.heatmap
 		)
 		worker.moveToThread(thread)
 
@@ -372,6 +385,7 @@ class MainUi(QtWidgets.QMainWindow):
 		if fileName:
 			self.fileName = Path(fileName)
 			self.setWindowTitle(f"Video: {self.fileName.name}")
+			self.data = {}
 			self.LoadWorker(self.fileName)
 
 	def bfunscriptPressed(self):
@@ -393,6 +407,14 @@ class MainUi(QtWidgets.QMainWindow):
 
 	def bheatmapPressed(self):
 		QtWidgets.QMessageBox.about(self, "80085", "Not Implemented!")
+
+	def cplpPressed(self):
+		self.plp = self.cplp.isChecked()
+		self.LoadWorker(self.fileName)
+
+	def cheatPressed(self):
+		self.heatmap = self.cheat.isChecked()
+		self.RenderWorker()
 
 if __name__ == "__main__":
 	app = QtWidgets.QApplication(sys.argv)

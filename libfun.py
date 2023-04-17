@@ -3,11 +3,18 @@ import numpy as np
 from json import dump
 
 #TODO: Fix action lag that happens sometimes, maybe change hop?
-def load_audio_data(audio_file, hop_length=1024, frame_length=1024):
+def load_audio_data(audio_file, hop_length=1024, frame_length=1024, plp=True):
 	y, sr = librosa.load(audio_file, sr=None, mono=True)
 
 	# Compute beats
-	_, beats = librosa.beat.beat_track(y=y, sr=sr, hop_length=hop_length, trim=False, units="time")
+	if (plp):
+		onset_env = librosa.onset.onset_strength(y=y, sr=sr)
+		pulse = librosa.beat.plp(onset_envelope=onset_env, sr=sr, hop_length=hop_length)
+		beats_plp = np.flatnonzero(librosa.util.localmax(pulse))
+		times = librosa.times_like(pulse, sr=sr)
+		beats = times[beats_plp]
+	else:
+		_, beats = librosa.beat.beat_track(y=y, sr=sr, hop_length=hop_length, trim=False, units="time")
 
 	# Compute energy (RMS)
 	rms = librosa.feature.rms(y=y, frame_length=frame_length, hop_length=hop_length)[0]
@@ -16,9 +23,9 @@ def load_audio_data(audio_file, hop_length=1024, frame_length=1024):
 	# Compute pitch
 	pitches, magnitudes = librosa.piptrack(y=y, sr=sr, hop_length=hop_length, center=True)
 
-	#TODO: The fuck does this do
 	pitches = np.fmax(0.01, pitches)
 	magnitudes = np.fmax(0.01, magnitudes)
+	#TODO: The fuck does this do
 	pitches = np.sum(pitches * magnitudes, axis=0) / np.sum(magnitudes, axis=0)
 
 	#Funny segment thing
