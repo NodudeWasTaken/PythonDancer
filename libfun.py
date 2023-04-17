@@ -8,6 +8,7 @@ def load_audio_data(audio_file, hop_length=1024, frame_length=1024, plp=True):
 
 	# Compute beats
 	if (plp):
+		#TODO: WIP
 		onset_env = librosa.onset.onset_strength(y=y, sr=sr)
 		pulse = librosa.beat.plp(onset_envelope=onset_env, sr=sr, hop_length=hop_length)
 		beats_plp = np.flatnonzero(librosa.util.localmax(pulse))
