@@ -247,8 +247,6 @@ class MainUi(QtWidgets.QMainWindow):
 		self.cheat.clicked.connect(self.cheatPressed)
 		self.cplp = self.findChild(QtWidgets.QCheckBox, "plpOpt")
 		self.cplp.clicked.connect(self.cplpPressed)
-		#WIP
-		self.cplp.setEnabled(False)
 
 		self.spitch = self.findChild(QtWidgets.QSlider, "pitchSlider")
 		self.senergy = self.findChild(QtWidgets.QSlider, "energySlider")

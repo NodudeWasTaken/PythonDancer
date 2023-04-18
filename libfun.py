@@ -7,15 +7,12 @@ def load_audio_data(audio_file, hop_length=1024, frame_length=1024, plp=True):
 	y, sr = librosa.load(audio_file, sr=None, mono=True)
 
 	# Compute beats
+	onset = None
 	if (plp):
-		#TODO: WIP
-		onset_env = librosa.onset.onset_strength(y=y, sr=sr)
-		pulse = librosa.beat.plp(onset_envelope=onset_env, sr=sr, hop_length=hop_length)
-		beats_plp = np.flatnonzero(librosa.util.localmax(pulse))
-		times = librosa.times_like(pulse, sr=sr)
-		beats = times[beats_plp]
-	else:
-		_, beats = librosa.beat.beat_track(y=y, sr=sr, hop_length=hop_length, trim=False, units="time")
+		pulse = librosa.beat.plp(y=y, sr=sr, hop_length=hop_length)
+		onset = pulse.T
+
+	_, beats = librosa.beat.beat_track(y=y, sr=sr, onset_envelope=onset, hop_length=hop_length, trim=False, units="time")
 
 	# Compute energy (RMS)
 	rms = librosa.feature.rms(y=y, frame_length=frame_length, hop_length=hop_length)[0]

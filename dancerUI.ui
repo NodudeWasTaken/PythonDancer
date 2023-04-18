@@ -49,6 +49,9 @@
                <height>25</height>
               </size>
              </property>
+             <property name="toolTip">
+              <string>Load a media file</string>
+             </property>
              <property name="text">
               <string>Load</string>
              </property>
@@ -224,6 +227,9 @@
               <layout class="QVBoxLayout" name="verticalLayout">
                <item>
                 <widget class="QCheckBox" name="heatOpt">
+                 <property name="toolTip">
+                  <string>Renders the funscript with heat colors, makes rendering slower.</string>
+                 </property>
                  <property name="text">
                   <string>Heatmap</string>
                  </property>
@@ -234,6 +240,9 @@
                </item>
                <item>
                 <widget class="QCheckBox" name="plpOpt">
+                 <property name="toolTip">
+                  <string>Uses the PLP estimator, which handles varying tempos a bit better</string>
+                 </property>
                  <property name="text">
                   <string>PLP estimation</string>
                  </property>
@@ -262,6 +271,9 @@
         <layout class="QHBoxLayout" name="horizontalLayout_7">
          <item>
           <widget class="QPushButton" name="funscriptButton">
+           <property name="toolTip">
+            <string>Save a funscript</string>
+           </property>
            <property name="text">
             <string>Funscript</string>
            </property>
@@ -269,6 +281,9 @@
          </item>
          <item>
           <widget class="QPushButton" name="heatmapButton">
+           <property name="toolTip">
+            <string>Save a heatmap</string>
+           </property>
            <property name="text">
             <string>Heatmap</string>
            </property>
