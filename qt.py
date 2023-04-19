@@ -1,6 +1,7 @@
 import io
 import shutil
 import sys, os
+from time import sleep
 from pathlib import Path
 import subprocess
 from zipfile import ZipFile
@@ -216,7 +217,7 @@ class MainUi(QtWidgets.QMainWindow):
 		self.data = {}
 		self.result = None
 		self.heatmap = True
-		self.plp = False
+		self.plp = True
 
 		self.babout = self.findChild(QtWidgets.QToolButton, "aboutButton")
 		self.bload = self.findChild(QtWidgets.QToolButton, "mediaButton")
@@ -264,6 +265,7 @@ class MainUi(QtWidgets.QMainWindow):
 
 		self.__loadworker = QtCore.QThread()
 		self.__renderworker = QtCore.QThread()
+		self.__waitloader = None
 
 		self.resized.connect(self.LoadWorker)
 
@@ -338,6 +340,19 @@ class MainUi(QtWidgets.QMainWindow):
 	def __render_prog(self, val):
 		self.pbat.setValue(val)
 
+	def __render_repeat_aux(self):
+		while (self.__renderworker.isRunning()):
+			sleep(0.001)
+
+		if (self.__waitloader != None):
+			self.__renderworker = self.__render_thread()
+			self.__waitloader = None
+
+			self.__renderworker.start()
+
+	def __render_repeat(self):
+		QtCore.QTimer.singleShot(1, self.__render_repeat_aux)
+
 	def __render_thread(self):
 		thread = QtCore.QThread()
 		worker = RenderWorker(
@@ -359,18 +374,17 @@ class MainUi(QtWidgets.QMainWindow):
 		thread.started.connect(worker.run)
 		worker.done.connect(self.__render_done)
 		worker.progressed.connect(self.__render_prog)
+		worker.finished.connect(self.__render_repeat)
 		worker.finished.connect(thread.quit)
 
 		return thread
 
-	#TODO: This is okay for the LoadWorker
-	# But in this one we should rather keep an eye on the latest value
-	# and display it.
-	# We should avoid multiple render threads
 	def RenderWorker(self):
 		if not self.__renderworker.isRunning():
 			self.__renderworker = self.__render_thread()
 			self.__renderworker.start()
+		else:
+			self.__waitloader = True
 
 	def bloadPressed(self):
 		options = QtWidgets.QFileDialog.Options()
