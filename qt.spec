@@ -17,7 +17,8 @@ a = Analysis(
 		"librosa.feature", 
 		"librosa.feature.rhythm", 
 		"librosa.beat", 
-		"librosa.core"
+		"librosa.core",
+		"charset_normalizer.md__mypyc",
 	],
 	hookspath=["extra-hooks"],
 	hooksconfig={},
