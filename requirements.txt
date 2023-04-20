@@ -5,5 +5,6 @@ numpy==1.24.2
 librosa==0.10.0.post2
 matplotlib==3.7.1
 pyinstaller
-charset-normalizer
+chardet
+charset-normalizer==2.1.0
 requests
