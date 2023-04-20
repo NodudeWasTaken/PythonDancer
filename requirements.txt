@@ -1,5 +1,6 @@
 PyQt5
 numba==0.57.0rc1
+llvmlite==0.40.0rc1
 numpy==1.24.2
 librosa==0.10.0.post2
 matplotlib==3.7.1
