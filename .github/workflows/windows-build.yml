@@ -16,13 +16,13 @@ jobs:
     - uses: actions/checkout@v3
     - uses: actions/setup-python@v4
       with:
-        python-version: '3.8'
+        python-version: '3.11'
 
     - name: Create venv
-      run: python -m venv env
+      run: python -m venv buildenv
 
     - name: Enter venv
-      run: .\env\Scripts\activate
+      run: .\buildenv\bin\activate
 
     - name: Install requirements
       run: pip install -r requirements.txt --prefer-binary
