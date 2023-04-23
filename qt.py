@@ -65,8 +65,6 @@ class LoadWorker(ImageWorker):
 
 		self.pre()
 
-		#TODO: Better progressbar
-
 		if (isinstance(self.fileName, Path)):
 			audioFile = Path("tmp", self.fileName.with_suffix(".wav").name)
 			audioFile.parent.mkdir(parents=True, exist_ok=True)
@@ -352,8 +350,10 @@ class MainUi(QtWidgets.QMainWindow):
 		self.goutput.fitInView(gfxPixItem)
 
 	def __render_repeat_aux(self):
-		while (self.__renderworker.isRunning()):
-			sleep(0.001)
+		#TODO: While loop it without UI freeze
+		if (self.__renderworker.isRunning()):
+			QtCore.QTimer.singleShot(10, self.__render_repeat_aux)
+			return
 
 		if (self.__waitloader != None):
 			self.__renderworker = self.__render_thread()
@@ -362,7 +362,7 @@ class MainUi(QtWidgets.QMainWindow):
 			self.__renderworker.start()
 
 	def __render_repeat(self):
-		QtCore.QTimer.singleShot(1, self.__render_repeat_aux)
+		QtCore.QTimer.singleShot(10, self.__render_repeat_aux)
 
 	def __render_thread(self):
 		thread = QtCore.QThread()
