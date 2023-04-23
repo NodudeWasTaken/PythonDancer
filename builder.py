@@ -4,6 +4,7 @@ import shutil
 import os
 import zipfile
 
+"""
 print("Download UPX")
 with requests.get("https://github.com/upx/upx/releases/download/v4.0.2/upx-4.0.2-win64.zip") as r:
 	with zipfile.ZipFile(io.BytesIO(r.content)) as z:
@@ -13,6 +14,7 @@ with requests.get("https://github.com/upx/upx/releases/download/v4.0.2/upx-4.0.2
 					with open("upx.exe", "wb") as f:
 						shutil.copyfileobj(zf, f)
 						break
+"""
 
 print("Building")
 os.system("pyinstaller qt.spec")
