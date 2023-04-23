@@ -84,6 +84,7 @@ class LoadWorker(ImageWorker):
 					])
 				except:
 					self.progressed.emit(-1, "Failed to convert to wav!")
+					self.finished.emit()
 					return
 
 				self.progressed.emit(20, "Transforming audio data...")
@@ -92,6 +93,7 @@ class LoadWorker(ImageWorker):
 				self.data = load_audio_data(audioFile, plp=self.plp)
 			except:
 				self.progressed.emit(-1, "Failed to transform audio data!")
+				self.finished.emit()
 				return
 
 			self.progressed.emit(50, "Plotting waveforms...")
@@ -142,6 +144,7 @@ class RenderWorker(ImageWorker):
 				)
 			except:
 				self.progressed.emit(-1, "Failed to create actions!")
+				self.finished.emit()
 				return
 
 			# plotting the graph
