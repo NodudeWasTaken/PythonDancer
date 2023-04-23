@@ -2,6 +2,7 @@ import librosa
 import numpy as np
 from json import dump
 from scipy.optimize import minimize
+from pathlib import Path
 import argparse
 
 #TODO: Fix action lag that happens sometimes, maybe change hop?
@@ -142,33 +143,38 @@ def create_actions(data, energy_multiplier=1, pitch_range=100, overflow=0):
 	data["energy_to_pos"] = np.array([i * energy_multiplier * 50 for i in normalize(data["energy"])])
 	return create_actions_barrier(data, overflow=overflow)
 
-def speed(A, B):
-	return (abs(B[1] - A[1]) / abs(B[0] - A[0])) / 500
+def _speed(A, B, smax=400.0):
+	v = abs(B[1] - A[1]) / (B[0] - A[0])
+	return v / smax
+def speed(A,B, **kwargs):
+	return max(min(_speed(A,B, **kwargs),1.0),0.0)
 
 def autoval(data, tpi=15, ten=300):
-	def cmean(pitch=0):
+	def cmean(pitch):
 		result = create_actions(data, energy_multiplier=0, pitch_range=pitch)
-		X,Y = map(list, zip(*result))
-		return np.nanmean(Y)
+		_,Y = map(list, zip(*result))
+		return np.average(Y)
 
-	def pdst(v):
-		return np.linalg.norm(cmean(v)-tpi)
+	def pdst(p):
+		a,b = cmean(p), tpi
+		return abs(a - b)
 
-	pres = minimize(pdst, 0)
+	pres = minimize(pdst, (100,), method="Nelder-Mead", bounds=((-200,200),))
 	pres = pres.x[0]
 
-	def csmean(pitch=0, energy=1):
-		result = create_actions(data, energy_multiplier=energy, pitch_range=pitch)
-		speeds = np.array([speed(result[i], result[i+1]) for i in range(len(result)-1)])
-		return np.nanmean(speeds)
+	def cemean(energy):
+		result = create_actions(data, energy_multiplier=energy, pitch_range=pres)
+		speeds = np.array([_speed(result[i],result[i+1],smax=1.0) for i in range(len(result)-1)], dtype=np.float32)
+		return np.average(speeds)
 
-	def edst(v):
-		return np.linalg.norm(csmean(pitch=pres, energy=v)-ten)
+	def edst(e):
+		a,b = cemean(e), ten
+		return abs(a - b)
 
-	pen = minimize(edst, 1)
-	pen = pen.x[0]
+	eres = minimize(edst, (10,), method="Nelder-Mead", bounds=((0,100),))
+	eres = eres.x[0]
 
-	return (pres,pen)
+	return pres, eres
 
 def dump_csv(f, data):
 	for at, pos in data:
@@ -196,14 +202,69 @@ def dump_funscript(f, data):
 	}, f)
 
 if __name__ == "__main__":
-	"""TODO:
-	parser = argparse.ArgumentParser(
-		prog="PythonDancer",
-		description="Creates funscripts from audio",
-		epilog="Bottom Text"
-	)
-	parser.add_argument("path to audio", help='an integer for the accumulator')
-	"""
+	import sys
 
-	with open("test.csv", "w") as f:
-		dump_csv(f, create_actions(load_audio_data("STAR.wav"), energy_multiplier=2))
+	parser = argparse.ArgumentParser(
+		prog="libfun",
+		description="Creates funscripts from audio",
+		formatter_class=argparse.ArgumentDefaultsHelpFormatter
+	)
+	parser.add_argument("audio_path", help="Path to input media")
+	parser.add_argument("--out_path", help="Path to export funscript")
+	parser.add_argument("--csv", help="Export as CSV instead of funscript", action="store_true")
+	parser.add_argument("-c", "--convert", help="Automatically use ffmpeg to convert input media", action="store_true")
+	parser.add_argument("-a", "--automap", help="Automatically find suitable pitch and energy values", action="store_true")
+	parser.add_argument("--no_plp", help="Disable PLP", action="store_false")
+	parser.add_argument("--auto_pitch", type=int, default=20, metavar="[0-100]", choices=range(0,100))
+	parser.add_argument("--auto_speed", type=int, default=250, metavar="[0-400]", choices=range(0,400))
+	parser.add_argument("--pitch", type=int, default=100, metavar="[-200-200]", choices=range(-200,200))
+	parser.add_argument("--energy", type=int, default=10, metavar="[0-100]", choices=range(0,100))
+	parser.add_argument("--overflow", type=int, default=0, metavar="[0-2]", choices=range(0,2))
+
+	args = parser.parse_args()
+
+	audioFile = Path(args.audio_path)
+
+	if (args.convert):
+		print("Processing audio...")
+		audioFile = Path("tmp", audioFile.with_suffix(".wav").name)
+		audioFile.parent.mkdir(parents=True, exist_ok=True)
+
+		from util import ffmpeg_conv
+		try:
+			ffmpeg_conv(args.audio_path, audioFile)
+		except:
+			print("Failed to convert to wav!")
+			sys.exit(1)
+
+	print("Loading audio...")
+	data = load_audio_data(audioFile, plp=not args.no_plp)
+
+	if (args.automap):
+		print("Automapping...")
+		pitch,energy = autoval(data, tpi=args.auto_pitch, ten=args.auto_speed)
+		args.pitch = pitch
+		args.energy = energy
+
+	print("Creating actions...")
+	actions = create_actions(
+		data,
+		energy_multiplier=args.energy,
+		pitch_range=args.pitch,
+		overflow=args.overflow
+	)
+
+	print("Writing...")
+	if (args.out_path):
+		out_file = Path(args.out_path)
+	else:
+		out_file = Path(args.audio_path)
+		out_file = out_file.with_suffix(".csv" if args.csv else ".funscript")
+
+	with open(out_file, "w") as f:
+		if (args.csv):
+			dump_csv(f, actions)
+		else:
+			dump_funscript(f, actions)
+
+	print("Done!")
