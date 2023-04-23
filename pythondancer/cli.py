@@ -2,7 +2,7 @@ import argparse
 from pathlib import Path
 import sys
 from pythondancer.libfun import autoval, create_actions, dump_csv, dump_funscript, load_audio_data
-from util import ffmpeg_conv
+from pythondancer.util import ffmpeg_conv
 
 parser = argparse.ArgumentParser(
 	prog="libfun",
