@@ -1,8 +1,8 @@
 import argparse
 from pathlib import Path
 import sys
-from pythondancer.libfun import autoval, create_actions, dump_csv, dump_funscript, load_audio_data
-from pythondancer.util import ffmpeg_conv
+from .libfun import autoval, create_actions, dump_csv, dump_funscript, load_audio_data
+from .util import ffmpeg_conv
 
 parser = argparse.ArgumentParser(
 	prog="libfun",
@@ -16,7 +16,7 @@ parser.add_argument("-c", "--convert", help="Automatically use ffmpeg to convert
 parser.add_argument("-a", "--automap", help="Automatically find suitable pitch and energy values", action="store_true")
 parser.add_argument("--no_plp", help="Disable PLP", action="store_false")
 parser.add_argument("--auto_pitch", type=int, default=20, metavar="[0-100]", choices=range(0,100))
-parser.add_argument("--auto_speed", type=int, default=250, metavar="[0-400]", choices=range(0,400))
+parser.add_argument("--auto_speed", type=int, default=300, metavar="[0-400]", choices=range(0,400))
 parser.add_argument("--pitch", type=int, default=100, metavar="[-200-200]", choices=range(-200,200))
 parser.add_argument("--energy", type=int, default=10, metavar="[0-100]", choices=range(0,100))
 parser.add_argument("--overflow", type=int, default=0, metavar="[0-2]", choices=range(0,2))
