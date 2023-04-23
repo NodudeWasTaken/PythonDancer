@@ -228,6 +228,8 @@ class MainUi(QtWidgets.QMainWindow):
 		self.bfunscript.clicked.connect(self.bfunscriptPressed)
 		self.bheatmap.clicked.connect(self.bheatmapPressed)
 
+		self.settingsPanel = self.findChild(QtWidgets.QGroupBox, "groupBox_2")
+
 		self.__loadworker = QtCore.QThread()
 		self.__renderworker = QtCore.QThread()
 		self.__waitloader = None
@@ -256,29 +258,11 @@ class MainUi(QtWidgets.QMainWindow):
 			return 2
 
 	def enableUX(self):
-		for i in [
-			self.bload,
-			self.spitch,
-			self.senergy,
-			self.bfunscript,
-			self.bheatmap,
-			self.bbounce,
-			self.bcrop,
-			self.bfold,
-		]:
-			i.setEnabled(True)
+		self.bload.setEnabled(True)
+		self.settingsPanel.setEnabled(True)
 	def disableUX(self):
-		for i in [
-			self.bload,
-			self.spitch,
-			self.senergy,
-			self.bfunscript,
-			self.bheatmap,
-			self.bbounce,
-			self.bcrop,
-			self.bfold,
-		]:
-			i.setEnabled(False)
+		self.bload.setEnabled(False)
+		self.settingsPanel.setEnabled(False)
 
 	def __load_done(self, data, img, init):
 		self.data = data
