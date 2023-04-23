@@ -14,8 +14,8 @@ from matplotlib.colors import LinearSegmentedColormap
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 
-from pythondancer.libfun import load_audio_data, create_actions, dump_funscript, speed, autoval
-from pythondancer.util import ffmpeg_check, ffmpeg_conv
+from .libfun import load_audio_data, create_actions, dump_funscript, speed, autoval
+from .util import ffmpeg_check, ffmpeg_conv
 
 plt.style.use(["ggplot", "dark_background", "fast"])
 

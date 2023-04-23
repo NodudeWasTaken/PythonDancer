@@ -2,8 +2,6 @@ import librosa
 import numpy as np
 from json import dump
 from scipy.optimize import minimize
-from pathlib import Path
-import argparse
 
 #TODO: Fix action lag that happens sometimes, maybe change hop?
 def load_audio_data(audio_file, hop_length=1024, frame_length=1024, plp=True):
