@@ -1,10 +1,8 @@
-import io
-import shutil
+
 import sys, os
 from time import sleep
 from pathlib import Path
 import subprocess
-from zipfile import ZipFile
 
 import PyQt5.QtWidgets as QtWidgets
 from PyQt5 import uic
@@ -17,48 +15,14 @@ from matplotlib.collections import LineCollection
 from matplotlib.colors import LinearSegmentedColormap
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
-import requests
 
 from libfun import load_audio_data, create_actions, dump_funscript
+from util import ffmpeg_check
 
 plt.style.use(["ggplot", "dark_background", "fast"])
 
-def ffmpeg_check():
-	try:
-		subprocess.check_call([
-			"ffmpeg","-version"
-		])
-	except FileNotFoundError:
-		#TODO: Status messages in UI
-		print("FFMpeg was missing")
-		if (sys.platform in ["win32","cygwin","msys"]):
-			print("Downloading now...")
-			with requests.get("https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip") as r:
-				with ZipFile(io.BytesIO(r.content)) as z:
-					for file in z.infolist():
-						if ("ffmpeg.exe" in file.filename):
-							with z.open(file.filename) as zf:
-								with open("ffmpeg.exe", "wb") as f:
-									shutil.copyfileobj(zf, f)
-									break
-			print("Downloaded!")
-		elif (sys.platform in ["linux"]):
-			print("Please install ffmpeg using your package manager!")
-			print("Suggestions:")
-			print("Ubuntu/Debian: sudo apt install ffmpeg")
-			print("Arch/Manjaro: sudo pacman -S ffmpeg")
-			sys.exit(1)
-		elif (sys.platform in ["darwin"]):
-			print("Please install ffmpeg using your package manager!")
-			print("Suggestions:")
-			print("Homebrew: brew install ffmpeg")
-			sys.exit(1)
-		else:
-			print("Please install ffmpeg!")
-			sys.exit(1)
-
 class ImageWorker(QtCore.QObject):
-	progressed = QtCore.pyqtSignal(int)
+	progressed = QtCore.pyqtSignal(int, str)
 	finished = QtCore.pyqtSignal()
 
 	def pre(self):
@@ -73,7 +37,7 @@ class ImageWorker(QtCore.QObject):
 		self.canvas = FigureCanvas(self.fig)
 
 	def post(self):
-		self.progressed.emit(90)
+		self.progressed.emit(90, "Drawing...")
 
 		self.canvas.draw()
 
@@ -83,7 +47,7 @@ class ImageWorker(QtCore.QObject):
 		im = QtGui.QImage(self.canvas.buffer_rgba(), w, h, bytesPerLine, QtGui.QImage.Format_RGBA8888)
 		self.img = QtGui.QPixmap(im)
 
-		self.progressed.emit(100)
+		self.progressed.emit(100, "Done!")
 
 class LoadWorker(ImageWorker):
 	done = QtCore.pyqtSignal(dict, QtGui.QPixmap)
@@ -97,7 +61,7 @@ class LoadWorker(ImageWorker):
 		self.plp = plp
 
 	def run(self):
-		self.progressed.emit(5)
+		self.progressed.emit(5, "Converting to wav...")
 
 		self.pre()
 
@@ -107,24 +71,30 @@ class LoadWorker(ImageWorker):
 			audioFile = Path("tmp", self.fileName.with_suffix(".wav").name)
 			audioFile.parent.mkdir(parents=True, exist_ok=True)
 
-			ffmpeg_check()
-
 			# TODO: Try catch
 			if (len(self.data) <= 0):
-				subprocess.check_call([
-					"ffmpeg",
-					"-y",
-					"-i", self.fileName,
-					"-map", "0:a",
-					"-ar", "48000",
-					audioFile
-				])
+				try:
+					subprocess.check_call([
+						"ffmpeg",
+						"-y",
+						"-i", self.fileName,
+						"-map", "0:a",
+						"-ar", "48000",
+						audioFile
+					])
+				except:
+					self.progressed.emit(-1, "Failed to convert to wav!")
+					return
 
-				self.progressed.emit(20)
+				self.progressed.emit(20, "Transforming audio data...")
 
-			self.data = load_audio_data(audioFile, plp=self.plp)
+			try:
+				self.data = load_audio_data(audioFile, plp=self.plp)
+			except:
+				self.progressed.emit(-1, "Failed to transform audio data!")
+				return
 
-			self.progressed.emit(50)
+			self.progressed.emit(50, "Plotting waveforms...")
 
 		if len(self.data) > 0:
 			# plotting the graph
@@ -160,15 +130,19 @@ class RenderWorker(ImageWorker):
 		result = []
 
 		if len(self.data) > 0:
-			self.progressed.emit(5)
+			self.progressed.emit(50, "Creating actions...")
 
 			# plotting the graph
-			result = create_actions(
-				self.data, 
-				energy_multiplier=self.energy_mult,
-				pitch_range=self.pitch_offset,
-				overflow=self.overflow
-			)
+			try:
+				result = create_actions(
+					self.data, 
+					energy_multiplier=self.energy_mult,
+					pitch_range=self.pitch_offset,
+					overflow=self.overflow
+				)
+			except:
+				self.progressed.emit(-1, "Failed to create actions!")
+				return
 
 			# plotting the graph
 			X,Y = map(list, zip(*result))
@@ -212,6 +186,7 @@ class MainUi(QtWidgets.QMainWindow):
 	def __init__(self):
 		super(MainUi, self).__init__()
 		uic.loadUi(uiForm, self)
+		self.setWindowTitle("PythonDancer")
 		self.OOR = 0
 		self.fileName = None
 		self.data = {}
@@ -225,6 +200,7 @@ class MainUi(QtWidgets.QMainWindow):
 		self.bload.clicked.connect(self.bloadPressed)
 		self.pbat = self.findChild(QtWidgets.QProgressBar, "progressBar")
 		self.pbat.setValue(0)
+		self.plabel = self.findChild(QtWidgets.QLabel, "progressLabel")
 
 		self.ginput = self.findChild(QtWidgets.QGraphicsView, "audioInput")
 		self.goutput = self.findChild(QtWidgets.QGraphicsView, "audioOutput")
@@ -255,8 +231,8 @@ class MainUi(QtWidgets.QMainWindow):
 		self.spitch.setValue(100)
 		self.senergy.setRange(0,100)
 		self.senergy.setValue(10)
-		self.spitch.valueChanged.connect(self.LoadWorker)
-		self.senergy.valueChanged.connect(self.LoadWorker)
+		self.spitch.valueChanged.connect(self.RenderWorker)
+		self.senergy.valueChanged.connect(self.RenderWorker)
 
 		self.bfunscript = self.findChild(QtWidgets.QPushButton, "funscriptButton")
 		self.bheatmap = self.findChild(QtWidgets.QPushButton, "heatmapButton")
@@ -271,12 +247,16 @@ class MainUi(QtWidgets.QMainWindow):
 
 		self.LoadWorker()
 
+		if (ffmpeg_check()):
+			self.disableUX()
+			self.plabel.setText("FFMpeg is missing, please download it!")
+
 	def resizeEvent(self, event):
 		self.resized.emit()
 		return super(MainUi, self).resizeEvent(event)
 
 	def baboutPressed(self):
-		QtWidgets.QMessageBox.about(self, "80085", "Not Implemented!")
+		QtWidgets.QMessageBox.about(self, "Sample Text", "Not Implemented!")
 
 	def bbouncePressed(self):
 		self.OOR = 1
@@ -290,6 +270,31 @@ class MainUi(QtWidgets.QMainWindow):
 		self.OOR = 2
 		self.RenderWorker()
 
+	def enableUX(self):
+		for i in [
+			self.bload,
+			self.spitch,
+			self.senergy,
+			self.bfunscript,
+			self.bheatmap,
+			self.bbounce,
+			self.bcrop,
+			self.bfold,
+		]:
+			i.setEnabled(True)
+	def disableUX(self):
+		for i in [
+			self.bload,
+			self.spitch,
+			self.senergy,
+			self.bfunscript,
+			self.bheatmap,
+			self.bbounce,
+			self.bcrop,
+			self.bfold,
+		]:
+			i.setEnabled(False)
+
 	# TODO: Generalize these, there is no reason to do boilerplate code twice
 	def __load_done(self, data, img):
 		self.data = data
@@ -297,9 +302,13 @@ class MainUi(QtWidgets.QMainWindow):
 		self.gsinput.clear()
 		gfxPixItem = self.gsinput.addPixmap(img)
 		self.ginput.fitInView(gfxPixItem)
+		self.enableUX()
 
-	def __load_prog(self, val):
+	def __load_prog(self, val, s):
 		self.pbat.setValue(val)
+		self.plabel.setText(s)
+		if (val == -1):
+			self.enableUX()
 
 	def __load_thread(self, fileName=None):
 		thread = QtCore.QThread()
@@ -329,6 +338,8 @@ class MainUi(QtWidgets.QMainWindow):
 	def LoadWorker(self, fileName=None):
 		if not self.__loadworker.isRunning():
 			self.__loadworker = self.__load_thread(fileName)
+			if (fileName):
+				self.disableUX()
 			self.__loadworker.start()
 
 	def __render_done(self, result, img):
@@ -336,9 +347,6 @@ class MainUi(QtWidgets.QMainWindow):
 		self.gsoutput.clear()
 		gfxPixItem = self.gsoutput.addPixmap(img)
 		self.goutput.fitInView(gfxPixItem)
-
-	def __render_prog(self, val):
-		self.pbat.setValue(val)
 
 	def __render_repeat_aux(self):
 		while (self.__renderworker.isRunning()):
@@ -373,7 +381,7 @@ class MainUi(QtWidgets.QMainWindow):
 
 		thread.started.connect(worker.run)
 		worker.done.connect(self.__render_done)
-		worker.progressed.connect(self.__render_prog)
+		worker.progressed.connect(self.__load_prog)
 		worker.finished.connect(self.__render_repeat)
 		worker.finished.connect(thread.quit)
 
@@ -398,7 +406,8 @@ class MainUi(QtWidgets.QMainWindow):
 		)
 		if fileName:
 			self.fileName = Path(fileName)
-			self.setWindowTitle(f"Video: {self.fileName.name}")
+			self.setWindowTitle(f"PythonDancer - {self.fileName.name}")
+			self.plabel.setText(f"Opening video: {self.fileName.name}")
 			self.data = {}
 			self.LoadWorker(self.fileName)
 
@@ -420,7 +429,7 @@ class MainUi(QtWidgets.QMainWindow):
 				dump_funscript(f, self.result)
 
 	def bheatmapPressed(self):
-		QtWidgets.QMessageBox.about(self, "80085", "Not Implemented!")
+		QtWidgets.QMessageBox.about(self, "Sample Text", "Not Implemented!")
 
 	def cplpPressed(self):
 		self.plp = self.cplp.isChecked()
