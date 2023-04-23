@@ -1,6 +1,8 @@
 import librosa
 import numpy as np
 from json import dump
+from scipy.optimize import minimize
+import argparse
 
 #TODO: Fix action lag that happens sometimes, maybe change hop?
 def load_audio_data(audio_file, hop_length=1024, frame_length=1024, plp=True):
@@ -140,6 +142,34 @@ def create_actions(data, energy_multiplier=1, pitch_range=100, overflow=0):
 	data["energy_to_pos"] = np.array([i * energy_multiplier * 50 for i in normalize(data["energy"])])
 	return create_actions_barrier(data, overflow=overflow)
 
+def speed(A, B):
+	return (abs(B[1] - A[1]) / abs(B[0] - A[0])) / 500
+
+def autoval(data, tpi=15, ten=300):
+	def cmean(pitch=0):
+		result = create_actions(data, energy_multiplier=0, pitch_range=pitch)
+		X,Y = map(list, zip(*result))
+		return np.nanmean(Y)
+
+	def pdst(v):
+		return np.linalg.norm(cmean(v)-tpi)
+
+	pres = minimize(pdst, 0)
+	pres = pres.x[0]
+
+	def csmean(pitch=0, energy=1):
+		result = create_actions(data, energy_multiplier=energy, pitch_range=pitch)
+		speeds = np.array([speed(result[i], result[i+1]) for i in range(len(result)-1)])
+		return np.nanmean(speeds)
+
+	def edst(v):
+		return np.linalg.norm(csmean(pitch=pres, energy=v)-ten)
+
+	pen = minimize(edst, 1)
+	pen = pen.x[0]
+
+	return (pres,pen)
+
 def dump_csv(f, data):
 	for at, pos in data:
 		f.write(f"{at*1000},{round(pos)}\n")
@@ -166,5 +196,14 @@ def dump_funscript(f, data):
 	}, f)
 
 if __name__ == "__main__":
+	"""TODO:
+	parser = argparse.ArgumentParser(
+		prog="PythonDancer",
+		description="Creates funscripts from audio",
+		epilog="Bottom Text"
+	)
+	parser.add_argument("path to audio", help='an integer for the accumulator')
+	"""
+
 	with open("test.csv", "w") as f:
 		dump_csv(f, create_actions(load_audio_data("STAR.wav"), energy_multiplier=2))

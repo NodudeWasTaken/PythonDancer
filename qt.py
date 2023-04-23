@@ -16,8 +16,8 @@ from matplotlib.colors import LinearSegmentedColormap
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 
-from libfun import load_audio_data, create_actions, dump_funscript
-from util import ffmpeg_check
+from libfun import load_audio_data, create_actions, dump_funscript, speed, autoval
+from util import ffmpeg_check, ffmpeg_conv
 
 plt.style.use(["ggplot", "dark_background", "fast"])
 
@@ -50,7 +50,7 @@ class ImageWorker(QtCore.QObject):
 		self.progressed.emit(100, "Done!")
 
 class LoadWorker(ImageWorker):
-	done = QtCore.pyqtSignal(dict, QtGui.QPixmap)
+	done = QtCore.pyqtSignal(dict, QtGui.QPixmap, bool)
 
 	def __init__(self, size, fileName, data, plp):
 		super().__init__()
@@ -69,17 +69,9 @@ class LoadWorker(ImageWorker):
 			audioFile = Path("tmp", self.fileName.with_suffix(".wav").name)
 			audioFile.parent.mkdir(parents=True, exist_ok=True)
 
-			# TODO: Try catch
 			if (len(self.data) <= 0):
 				try:
-					subprocess.check_call([
-						"ffmpeg",
-						"-y",
-						"-i", self.fileName,
-						"-map", "0:a",
-						"-ar", "48000",
-						audioFile
-					])
+					ffmpeg_conv(self.fileName, audioFile)
 				except:
 					self.progressed.emit(-1, "Failed to convert to wav!")
 					self.finished.emit()
@@ -104,7 +96,7 @@ class LoadWorker(ImageWorker):
 
 		self.post()
 
-		self.done.emit(self.data, self.img)
+		self.done.emit(self.data, self.img, isinstance(self.fileName, Path))
 		self.finished.emit()
 
 
@@ -121,9 +113,6 @@ class RenderWorker(ImageWorker):
 		self.pitch_offset = pitch_offset
 		self.overflow = overflow
 		self.heatmap = heatmap
-
-	def speed(self, A, B):
-		return (abs(B[1] - A[1]) / abs(B[0] - A[0])) / 500
 
 	def run(self):
 		self.pre()
@@ -151,13 +140,15 @@ class RenderWorker(ImageWorker):
 				points = np.array([X, Y]).T.reshape(-1, 1, 2)
 				segments = np.concatenate([points[:-1], points[1:]], axis=1)
 
-				colors = np.array([self.my_cmap(self.speed((X[i], Y[i]), (X[i+1], Y[i+1]))) for i in range(len(Y)-1)])
+				colors = np.array([self.my_cmap(speed((X[i], Y[i]), (X[i+1], Y[i+1]))) for i in range(len(Y)-1)])
 
 				lc = LineCollection(segments, colors=colors, linewidths=.5)
 				self.plot.add_collection(lc)
 				self.plot.autoscale()
 			else:
 				self.plot.plot(X,Y, linewidth=.5)
+			
+			#self.plot.axhline(y=np.nanmean(Y))
 
 		self.plot.set_ylim(0,100)
 		if ("at" in self.data):
@@ -188,12 +179,9 @@ class MainUi(QtWidgets.QMainWindow):
 		super(MainUi, self).__init__()
 		uic.loadUi(uiForm, self)
 		self.setWindowTitle("PythonDancer")
-		self.OOR = 0
 		self.fileName = None
 		self.data = {}
 		self.result = None
-		self.heatmap = True
-		self.plp = True
 
 		self.babout = self.findChild(QtWidgets.QToolButton, "aboutButton")
 		self.bload = self.findChild(QtWidgets.QToolButton, "mediaButton")
@@ -217,14 +205,18 @@ class MainUi(QtWidgets.QMainWindow):
 		self.bbounce = self.findChild(QtWidgets.QRadioButton, "bounceButton")
 		self.bcrop = self.findChild(QtWidgets.QRadioButton, "cropButton")
 		self.bfold = self.findChild(QtWidgets.QRadioButton, "foldButton")
-		self.bbounce.clicked.connect(self.bbouncePressed)
-		self.bcrop.clicked.connect(self.bcropPressed)
-		self.bfold.clicked.connect(self.bfoldPressed)
+		self.bbounce.clicked.connect(self.RenderWorker)
+		self.bcrop.clicked.connect(self.RenderWorker)
+		self.bfold.clicked.connect(self.RenderWorker)
 
 		self.cheat = self.findChild(QtWidgets.QCheckBox, "heatOpt")
 		self.cheat.clicked.connect(self.cheatPressed)
 		self.cplp = self.findChild(QtWidgets.QCheckBox, "plpOpt")
 		self.cplp.clicked.connect(self.cplpPressed)
+		self.cmap = self.findChild(QtWidgets.QCheckBox, "mapOpt")
+		self.cmap.clicked.connect(self.cmapPressed)
+		self.stpitch = self.findChild(QtWidgets.QSpinBox, "pitchBox")
+		self.stspeed = self.findChild(QtWidgets.QSpinBox, "speedBox")
 
 		self.spitch = self.findChild(QtWidgets.QSlider, "pitchSlider")
 		self.senergy = self.findChild(QtWidgets.QSlider, "energySlider")
@@ -257,19 +249,15 @@ class MainUi(QtWidgets.QMainWindow):
 		return super(MainUi, self).resizeEvent(event)
 
 	def baboutPressed(self):
-		QtWidgets.QMessageBox.about(self, "Sample Text", "Not Implemented!")
+		QtWidgets.QMessageBox.about(self, "About", """Not Implemented""")
 
-	def bbouncePressed(self):
-		self.OOR = 1
-		self.RenderWorker()
-
-	def bcropPressed(self):
-		self.OOR = 0
-		self.RenderWorker()
-
-	def bfoldPressed(self):
-		self.OOR = 2
-		self.RenderWorker()
+	def OOR(self):
+		if (self.bcrop.isChecked()):
+			return 0
+		elif (self.bbounce.isChecked()):
+			return 1
+		elif (self.bfold.isChecked()):
+			return 2
 
 	def enableUX(self):
 		for i in [
@@ -296,9 +284,10 @@ class MainUi(QtWidgets.QMainWindow):
 		]:
 			i.setEnabled(False)
 
-	# TODO: Generalize these, there is no reason to do boilerplate code twice
-	def __load_done(self, data, img):
+	def __load_done(self, data, img, init):
 		self.data = data
+		if (init):
+			self.automap()
 		self.RenderWorker()
 		self.gsinput.clear()
 		gfxPixItem = self.gsinput.addPixmap(img)
@@ -320,7 +309,7 @@ class MainUi(QtWidgets.QMainWindow):
 			),
 			fileName,
 			self.data,
-			self.plp
+			self.cplp.isChecked()
 		)
 		worker.moveToThread(thread)
 
@@ -334,8 +323,6 @@ class MainUi(QtWidgets.QMainWindow):
 
 		return thread
 
-	#TODO: Disable load button while loading
-	# Better implement error handling first though
 	def LoadWorker(self, fileName=None):
 		if not self.__loadworker.isRunning():
 			self.__loadworker = self.__load_thread(fileName)
@@ -374,8 +361,8 @@ class MainUi(QtWidgets.QMainWindow):
 			self.data,
 			self.senergy.value() / 10.0,
 			self.spitch.value(),
-			self.OOR,
-			self.heatmap
+			self.OOR(),
+			self.cheat.isChecked()
 		)
 		worker.moveToThread(thread)
 
@@ -435,11 +422,19 @@ class MainUi(QtWidgets.QMainWindow):
 		QtWidgets.QMessageBox.about(self, "Sample Text", "Not Implemented!")
 
 	def cplpPressed(self):
-		self.plp = self.cplp.isChecked()
 		self.LoadWorker(self.fileName)
 
 	def cheatPressed(self):
-		self.heatmap = self.cheat.isChecked()
+		self.RenderWorker()
+
+	def automap(self):
+		if (self.cmap.isChecked() and len(self.data) > 0):
+			pitch,energy = autoval(self.data, tpi=self.stpitch.value(), ten=self.stspeed.value())
+			self.spitch.setValue(int(pitch))
+			self.senergy.setValue(int(energy))
+
+	def cmapPressed(self):
+		self.automap()
 		self.RenderWorker()
 
 if __name__ == "__main__":
