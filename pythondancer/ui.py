@@ -169,7 +169,7 @@ def resource_path(relative_path):
 
 	return os.path.join(base_path, relative_path)
 
-uiForm = resource_path("pythondancer/dancerUI.ui")
+uiForm = resource_path("dancerUI.ui")
 class MainUi(QtWidgets.QMainWindow):
 	resized = QtCore.pyqtSignal()
 
