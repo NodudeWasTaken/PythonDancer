@@ -1,8 +1,6 @@
 
 import sys, os
-from time import sleep
 from pathlib import Path
-import subprocess
 
 import PyQt5.QtWidgets as QtWidgets
 from PyQt5 import uic
@@ -217,13 +215,11 @@ class MainUi(QtWidgets.QMainWindow):
 		self.cmap.clicked.connect(self.cmapPressed)
 		self.stpitch = self.findChild(QtWidgets.QSpinBox, "pitchBox")
 		self.stspeed = self.findChild(QtWidgets.QSpinBox, "speedBox")
+		self.stpitch.editingFinished.connect(self.cmapPressed)
+		self.stspeed.editingFinished.connect(self.cmapPressed)
 
 		self.spitch = self.findChild(QtWidgets.QSlider, "pitchSlider")
 		self.senergy = self.findChild(QtWidgets.QSlider, "energySlider")
-		self.spitch.setRange(-200,200)
-		self.spitch.setValue(100)
-		self.senergy.setRange(0,100)
-		self.senergy.setValue(10)
 		self.spitch.valueChanged.connect(self.RenderWorker)
 		self.senergy.valueChanged.connect(self.RenderWorker)
 
@@ -326,8 +322,6 @@ class MainUi(QtWidgets.QMainWindow):
 	def LoadWorker(self, fileName=None):
 		if not self.__loadworker.isRunning():
 			self.__loadworker = self.__load_thread(fileName)
-			if (fileName):
-				self.disableUX()
 			self.__loadworker.start()
 
 	def __render_done(self, result, img):
@@ -399,6 +393,7 @@ class MainUi(QtWidgets.QMainWindow):
 			self.setWindowTitle(f"PythonDancer - {self.fileName.name}")
 			self.plabel.setText(f"Opening video: {self.fileName.name}")
 			self.data = {}
+			self.disableUX()
 			self.LoadWorker(self.fileName)
 
 	def bfunscriptPressed(self):
@@ -429,9 +424,9 @@ class MainUi(QtWidgets.QMainWindow):
 
 	def automap(self):
 		if (self.cmap.isChecked() and len(self.data) > 0):
-			pitch,energy = autoval(self.data, tpi=self.stpitch.value(), ten=self.stspeed.value())
+			pitch, energy = autoval(self.data, tpi=self.stpitch.value(), ten=self.stspeed.value())
 			self.spitch.setValue(int(pitch))
-			self.senergy.setValue(int(energy))
+			self.senergy.setValue(int(energy * 10.0))
 
 	def cmapPressed(self):
 		self.automap()

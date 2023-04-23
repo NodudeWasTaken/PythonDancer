@@ -68,8 +68,11 @@
              </item>
              <item>
               <widget class="QProgressBar" name="progressBar">
+               <property name="minimum">
+                <number>-1</number>
+               </property>
                <property name="value">
-                <number>24</number>
+                <number>0</number>
                </property>
               </widget>
              </item>
@@ -147,6 +150,15 @@
              <layout class="QHBoxLayout" name="horizontalLayout_5">
               <item>
                <widget class="QSlider" name="pitchSlider">
+                <property name="minimum">
+                 <number>-200</number>
+                </property>
+                <property name="maximum">
+                 <number>200</number>
+                </property>
+                <property name="value">
+                 <number>100</number>
+                </property>
                 <property name="orientation">
                  <enum>Qt::Vertical</enum>
                 </property>
@@ -163,6 +175,12 @@
              <layout class="QHBoxLayout" name="horizontalLayout_4">
               <item>
                <widget class="QSlider" name="energySlider">
+                <property name="maximum">
+                 <number>100</number>
+                </property>
+                <property name="value">
+                 <number>10</number>
+                </property>
                 <property name="orientation">
                  <enum>Qt::Vertical</enum>
                 </property>
@@ -338,7 +356,7 @@
                     <number>500</number>
                    </property>
                    <property name="value">
-                    <number>300</number>
+                    <number>250</number>
                    </property>
                   </widget>
                  </item>
