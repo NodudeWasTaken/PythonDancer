@@ -17,3 +17,13 @@ def ffmpeg_check():
 		return True
 
 	return False
+
+def ffmpeg_conv(input, output):
+	subprocess.check_call([
+		"ffmpeg",
+		"-y",
+		"-i", input,
+		"-map", "0:a",
+		"-ar", "48000",
+		output
+	])
