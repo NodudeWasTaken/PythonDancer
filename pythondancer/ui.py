@@ -14,8 +14,8 @@ from matplotlib.colors import LinearSegmentedColormap
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 
-from libfun import load_audio_data, create_actions, dump_funscript, speed, autoval
-from util import ffmpeg_check, ffmpeg_conv
+from pythondancer.libfun import load_audio_data, create_actions, dump_funscript, speed, autoval
+from pythondancer.util import ffmpeg_check, ffmpeg_conv
 
 plt.style.use(["ggplot", "dark_background", "fast"])
 
@@ -169,7 +169,7 @@ def resource_path(relative_path):
 
 	return os.path.join(base_path, relative_path)
 
-uiForm = resource_path("dancerUI.ui")
+uiForm = resource_path("pythondancer/dancerUI.ui")
 class MainUi(QtWidgets.QMainWindow):
 	resized = QtCore.pyqtSignal()
 
