@@ -10,11 +10,10 @@ import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 from matplotlib.collections import LineCollection
-from matplotlib.colors import LinearSegmentedColormap
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 
-from .libfun import load_audio_data, create_actions, dump_funscript, speed, autoval, VERSION
+from .libfun import load_audio_data, create_actions, dump_funscript, speed, autoval, render_heatmap, VERSION, HEATMAP
 from .util import ffmpeg_check, ffmpeg_conv
 
 plt.style.use(["ggplot", "dark_background", "fast"])
@@ -97,10 +96,8 @@ class LoadWorker(ImageWorker):
 		self.done.emit(self.data, self.img, isinstance(self.fileName, Path))
 		self.finished.emit()
 
-
 class RenderWorker(ImageWorker):
 	done = QtCore.pyqtSignal(list, QtGui.QPixmap)
-	my_cmap = LinearSegmentedColormap.from_list("intensity",["w", "g", "orange", "r"], N=256)
 
 	def __init__(self, size, data, energy_mult, pitch_offset, overflow, heatmap):
 		super().__init__()
@@ -138,7 +135,7 @@ class RenderWorker(ImageWorker):
 				points = np.array([X, Y]).T.reshape(-1, 1, 2)
 				segments = np.concatenate([points[:-1], points[1:]], axis=1)
 
-				colors = np.array([self.my_cmap(speed((X[i], Y[i]), (X[i+1], Y[i+1]))) for i in range(len(Y)-1)])
+				colors = np.array([HEATMAP(speed((X[i], Y[i]), (X[i+1], Y[i+1]))) for i in range(len(Y)-1)])
 
 				lc = LineCollection(segments, colors=colors, linewidths=.5)
 				self.plot.add_collection(lc)
@@ -238,6 +235,9 @@ class MainUi(QtWidgets.QMainWindow):
 
 		self.LoadWorker()
 
+		self.bfunscript.setEnabled(False)
+		self.bheatmap.setEnabled(False)
+
 		if (ffmpeg_check()):
 			self.disableUX()
 			self.plabel.setText("FFMpeg is missing, please download it!")
@@ -270,6 +270,9 @@ Thanks to you for using this software!""")
 		self.data = data
 		if (init):
 			self.automap()
+			self.bfunscript.setEnabled(True)
+			self.bheatmap.setEnabled(True)
+
 		self.RenderWorker()
 		self.gsinput.clear()
 		gfxPixItem = self.gsinput.addPixmap(img)
@@ -400,7 +403,26 @@ Thanks to you for using this software!""")
 				dump_funscript(f, self.result)
 
 	def bheatmapPressed(self):
-		QtWidgets.QMessageBox.about(self, "Sample Text", "Not Implemented!")
+		if (len(self.data) <= 0):
+			return
+
+		options = QtWidgets.QFileDialog.Options()
+		#options |= QtWidgets.QFileDialog.DontUseNativeDialog
+		fileName, _ = QtWidgets.QFileDialog.getSaveFileName(
+			self,
+			"Save a heatmap", 
+			str(self.fileName.with_stem(self.fileName.stem + "_heatmap").with_suffix(".png").resolve()), 
+			"PNG Files (*.png)", 
+			options=options
+		)
+		if fileName:
+			fig = render_heatmap(
+				self.data, 
+				self.senergy.value() / 10.0,
+				self.spitch.value(),
+				self.OOR()
+			)
+			fig.savefig(fileName, bbox_inches="tight", pad_inches=0)
 
 	def cplpPressed(self):
 		self.LoadWorker(self.fileName)

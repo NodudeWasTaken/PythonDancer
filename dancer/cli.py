@@ -1,7 +1,7 @@
 import argparse
 from pathlib import Path
 import sys
-from .libfun import autoval, create_actions, dump_csv, dump_funscript, load_audio_data
+from .libfun import autoval, create_actions, dump_csv, dump_funscript, load_audio_data, render_heatmap
 from .util import ffmpeg_conv
 
 parser = argparse.ArgumentParser(
@@ -12,6 +12,7 @@ parser = argparse.ArgumentParser(
 parser.add_argument("audio_path", help="Path to input media")
 parser.add_argument("--out_path", help="Path to export funscript")
 parser.add_argument("--csv", help="Export as CSV instead of funscript", action="store_true")
+parser.add_argument("-h", "--heatmap", help="Export heatmap", action="store_true")
 parser.add_argument("-c", "--convert", help="Automatically use ffmpeg to convert input media", action="store_true")
 parser.add_argument("-a", "--automap", help="Automatically find suitable pitch and energy values", action="store_true")
 parser.add_argument("--no_plp", help="Disable PLP", action="store_false")
@@ -65,5 +66,16 @@ with open(out_file, "w") as f:
 		dump_csv(f, actions)
 	else:
 		dump_funscript(f, actions)
+
+if (args.heatmap):
+	render_heatmap(
+		data,
+		args.energy,
+		args.pitch,
+		args.overflow
+		).savefig(
+			out_file
+			.with_stem(out_file.stem + "_heatmap")
+			.with_suffix(".png"))
 
 print("Done!")
