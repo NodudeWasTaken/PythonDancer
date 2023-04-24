@@ -14,7 +14,7 @@ from matplotlib.colors import LinearSegmentedColormap
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 
-from .libfun import load_audio_data, create_actions, dump_funscript, speed, autoval
+from .libfun import load_audio_data, create_actions, dump_funscript, speed, autoval, VERSION
 from .util import ffmpeg_check, ffmpeg_conv
 
 plt.style.use(["ggplot", "dark_background", "fast"])
@@ -176,7 +176,7 @@ class MainUi(QtWidgets.QMainWindow):
 	def __init__(self):
 		super(MainUi, self).__init__()
 		uic.loadUi(uiForm, self)
-		self.setWindowTitle("PythonDancer")
+		self.setWindowTitle(f"PythonDancer {VERSION}")
 		self.fileName = None
 		self.data = {}
 		self.result = None
@@ -247,7 +247,9 @@ class MainUi(QtWidgets.QMainWindow):
 		return super(MainUi, self).resizeEvent(event)
 
 	def baboutPressed(self):
-		QtWidgets.QMessageBox.about(self, "About", """Not Implemented""")
+		QtWidgets.QMessageBox.about(self, "About", """Thanks to ncdxncdx for the original application!
+Thanks to Nodude for the Python port!
+Thanks to you for using this software!""")
 
 	def OOR(self):
 		if (self.bcrop.isChecked()):
@@ -374,7 +376,7 @@ class MainUi(QtWidgets.QMainWindow):
 		)
 		if fileName:
 			self.fileName = Path(fileName)
-			self.setWindowTitle(f"PythonDancer - {self.fileName.name}")
+			self.setWindowTitle(f"PythonDancer {VERSION} - {self.fileName.name}")
 			self.plabel.setText(f"Opening video: {self.fileName.name}")
 			self.data = {}
 			self.disableUX()
