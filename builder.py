@@ -15,7 +15,6 @@ with requests.get("https://github.com/upx/upx/releases/download/v4.0.2/upx-4.0.2
 						shutil.copyfileobj(zf, f)
 						break
 
-
 print("Building")
 os.system("pyinstaller qt.spec")
 

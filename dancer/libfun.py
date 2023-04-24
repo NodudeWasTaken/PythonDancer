@@ -2,8 +2,12 @@ import librosa
 import numpy as np
 from json import dump
 from scipy.optimize import minimize
+import matplotlib as mpl
+from matplotlib.colors import LinearSegmentedColormap
+from matplotlib.figure import Figure
 
 VERSION="?"
+HEATMAP = LinearSegmentedColormap.from_list("intensity",["w", "g", "orange", "r"], N=256)
 
 #TODO: Fix action lag that happens sometimes, maybe change hop?
 def load_audio_data(audio_file, hop_length=1024, frame_length=1024, plp=True):
@@ -175,6 +179,23 @@ def autoval(data, tpi=15, ten=300):
 	eres = eres.x[0]
 
 	return pres, eres
+
+def render_heatmap(data, energy, pitch, oor, w=4096, h=128):
+	result = create_actions(
+		data, 
+		energy_multiplier=energy, 
+		pitch_range = pitch,
+		overflow = oor,
+	)
+	speeds = np.array([speed(result[i],result[i+1]) for i in range(len(result)-1)])
+	gradient = np.vstack([speeds]*h)
+
+	dpi = mpl.rcParams["figure.dpi"]
+	fig = Figure(figsize=(w/dpi, h/dpi), tight_layout=True)
+	plot = fig.add_subplot(111)
+	plot.imshow(gradient, cmap=HEATMAP, interpolation="lanczos")
+	plot.axis("off")
+	return fig
 
 def dump_csv(f, data):
 	for at, pos in data:
