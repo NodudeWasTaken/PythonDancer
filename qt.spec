@@ -5,7 +5,7 @@ block_cipher = None
 
 
 a = Analysis(
-	['dancer/ui.py'],
+	['qt.py'],
 	pathex=[],
 	binaries=[],
 	datas=[("dancerUI.ui",".")],

@@ -12,7 +12,7 @@ parser = argparse.ArgumentParser(
 parser.add_argument("audio_path", help="Path to input media")
 parser.add_argument("--out_path", help="Path to export funscript")
 parser.add_argument("--csv", help="Export as CSV instead of funscript", action="store_true")
-parser.add_argument("-h", "--heatmap", help="Export heatmap", action="store_true")
+parser.add_argument("-m", "--heatmap", help="Export heatmap", action="store_true")
 parser.add_argument("-c", "--convert", help="Automatically use ffmpeg to convert input media", action="store_true")
 parser.add_argument("-a", "--automap", help="Automatically find suitable pitch and energy values", action="store_true")
 parser.add_argument("--no_plp", help="Disable PLP", action="store_false")
