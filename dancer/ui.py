@@ -440,8 +440,11 @@ Thanks to you for using this software!""")
 		self.automap()
 		self.RenderWorker()
 
-if __name__ == "__main__":
+def main():
 	app = QtWidgets.QApplication(sys.argv)
 	window = MainUi()
 	window.show()
 	sys.exit(app.exec_())
+
+if __name__ == "__main__":
+	main()
