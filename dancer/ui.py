@@ -13,8 +13,10 @@ from matplotlib.collections import LineCollection
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 
+from .cli import cmd
+
 from .libfun import load_audio_data, create_actions, dump_funscript, speed, autoval, render_heatmap, VERSION, HEATMAP
-from .util import ffmpeg_check, ffmpeg_conv
+from .util import cli_args, ffmpeg_check, ffmpeg_conv
 
 plt.style.use(["ggplot", "dark_background", "fast"])
 
@@ -170,7 +172,7 @@ uiForm = resource_path("dancerUI.ui")
 class MainUi(QtWidgets.QMainWindow):
 	resized = QtCore.pyqtSignal()
 
-	def __init__(self):
+	def __init__(self, args):
 		super(MainUi, self).__init__()
 		uic.loadUi(uiForm, self)
 		self.setWindowTitle(f"PythonDancer {VERSION}")
@@ -233,7 +235,6 @@ class MainUi(QtWidgets.QMainWindow):
 
 		self.resized.connect(self.LoadWorker)
 
-		self.LoadWorker()
 
 		self.bfunscript.setEnabled(False)
 		self.bheatmap.setEnabled(False)
@@ -241,6 +242,10 @@ class MainUi(QtWidgets.QMainWindow):
 		if (ffmpeg_check()):
 			self.disableUX()
 			self.plabel.setText("FFMpeg is missing, please download it!")
+		elif (args.audio_file):
+			self.loadfile(args.audio_file)
+		else:
+			self.LoadWorker()
 
 	def resizeEvent(self, event):
 		self.resized.emit()
@@ -367,6 +372,14 @@ Thanks to you for using this software!""")
 		else:
 			self.__waitloader = True
 
+	def loadfile(self, fileName):
+		self.fileName = Path(fileName)
+		self.setWindowTitle(f"PythonDancer {VERSION} - {self.fileName.name}")
+		self.plabel.setText(f"Opening video: {self.fileName.name}")
+		self.data = {}
+		self.disableUX()
+		self.LoadWorker(self.fileName)
+
 	def bloadPressed(self):
 		options = QtWidgets.QFileDialog.Options()
 		#options |= QtWidgets.QFileDialog.DontUseNativeDialog
@@ -378,12 +391,7 @@ Thanks to you for using this software!""")
 			options=options
 		)
 		if fileName:
-			self.fileName = Path(fileName)
-			self.setWindowTitle(f"PythonDancer {VERSION} - {self.fileName.name}")
-			self.plabel.setText(f"Opening video: {self.fileName.name}")
-			self.data = {}
-			self.disableUX()
-			self.LoadWorker(self.fileName)
+			self.loadfile(fileName)
 
 	def bfunscriptPressed(self):
 		if (not self.result):
@@ -440,11 +448,11 @@ Thanks to you for using this software!""")
 		self.automap()
 		self.RenderWorker()
 
-def main():
+def ux(args):
 	app = QtWidgets.QApplication(sys.argv)
-	window = MainUi()
+	window = MainUi(args)
 	window.show()
 	sys.exit(app.exec_())
 
 if __name__ == "__main__":
-	main()
+	ux(cli_args().parse_args())
