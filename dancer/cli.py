@@ -1,5 +1,4 @@
 from pathlib import Path
-import sys
 
 from .libfun import autoval, create_actions, dump_csv, dump_funscript, load_audio_data, render_heatmap
 from .util import ffmpeg_conv, ffmpeg_check, cli_args

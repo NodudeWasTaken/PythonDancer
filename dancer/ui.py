@@ -185,7 +185,6 @@ class MainUi(QtWidgets.QMainWindow):
 		self.babout.clicked.connect(self.baboutPressed)
 		self.bload.clicked.connect(self.bloadPressed)
 		self.pbat = self.findChild(QtWidgets.QProgressBar, "progressBar")
-		self.pbat.setValue(0)
 		self.plabel = self.findChild(QtWidgets.QLabel, "progressLabel")
 
 		self.ginput = self.findChild(QtWidgets.QGraphicsView, "audioInput")
@@ -234,7 +233,6 @@ class MainUi(QtWidgets.QMainWindow):
 		self.__waitloader = None
 
 		self.resized.connect(self.LoadWorker)
-
 
 		self.bfunscript.setEnabled(False)
 		self.bheatmap.setEnabled(False)
@@ -382,7 +380,6 @@ Thanks to you for using this software!""")
 
 	def bloadPressed(self):
 		options = QtWidgets.QFileDialog.Options()
-		#options |= QtWidgets.QFileDialog.DontUseNativeDialog
 		fileName, _ = QtWidgets.QFileDialog.getOpenFileName(
 			self,
 			"Open a media file", 
@@ -398,7 +395,6 @@ Thanks to you for using this software!""")
 			return
 
 		options = QtWidgets.QFileDialog.Options()
-		#options |= QtWidgets.QFileDialog.DontUseNativeDialog
 		fileName, _ = QtWidgets.QFileDialog.getSaveFileName(
 			self,
 			"Save a funscript", 
