@@ -180,6 +180,7 @@ def autoval(data, tpi=15, ten=300):
 
 	return pres, eres
 
+#TODO: Do better
 def render_heatmap(data, energy, pitch, oor, w=4096, h=128):
 	result = create_actions(
 		data, 
