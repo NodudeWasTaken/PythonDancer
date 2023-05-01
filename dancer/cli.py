@@ -14,6 +14,16 @@ def cmd(args):
 		print("Audio file doesn't exist!")
 		return
 
+	if (args.out_path):
+		out_file = Path(args.out_path)
+	else:
+		out_file = Path(args.audio_path)
+		out_file = out_file.with_suffix(".csv" if args.csv else ".funscript")
+
+	if (out_file.exists() or not args.yes):
+		print("Funscript already exists!")
+		return
+
 	if (args.convert):
 		print("Processing audio...")
 		audioFile = Path("tmp", audioFile.with_suffix(".wav").name)
@@ -46,18 +56,11 @@ def cmd(args):
 	)
 
 	print("Writing...")
-	if (args.out_path):
-		out_file = Path(args.out_path)
-	else:
-		out_file = Path(args.audio_path)
-		out_file = out_file.with_suffix(".csv" if args.csv else ".funscript")
-
-	if (not out_file.exists() or args.yes):
-		with open(out_file, "w") as f:
-			if (args.csv):
-				dump_csv(f, actions)
-			else:
-				dump_funscript(f, actions)
+	with open(out_file, "w", encoding="utf8") as f:
+		if (args.csv):
+			dump_csv(f, actions)
+		else:
+			dump_funscript(f, actions)
 
 	if (args.heatmap):
 		render_heatmap(
