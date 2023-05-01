@@ -242,8 +242,8 @@ class MainUi(QtWidgets.QMainWindow):
 		if (ffmpeg_check()):
 			self.disableUX()
 			self.plabel.setText("FFMpeg is missing, please download it!")
-		elif (args.audio_file):
-			self.loadfile(args.audio_file)
+		elif (args.audio_path):
+			self.loadfile(args.audio_path)
 		else:
 			self.LoadWorker()
 

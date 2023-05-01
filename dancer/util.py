@@ -43,7 +43,7 @@ def cli_args():
 	parser.add_argument("-c", "--convert", help="Automatically use ffmpeg to convert input media", action="store_true")
 	parser.add_argument("-a", "--automap", help="Automatically find suitable pitch and energy values", action="store_true")
 	parser.add_argument("-y", "--yes", help="Overwrite funscript", action="store_true")
-	parser.add_argument("--no_plp", help="Disable PLP", action="store_false")
+	parser.add_argument("--no_plp", help="Disable PLP", action="store_true")
 	parser.add_argument("--cli", help="Use commandline", action="store_true")
 	parser.add_argument("--auto_pitch", type=int, default=20, metavar="[0-100]", choices=range(0,100))
 	parser.add_argument("--auto_speed", type=int, default=250, metavar="[0-400]", choices=range(0,400))
