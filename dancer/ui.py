@@ -411,7 +411,6 @@ Thanks to you for using this software!""")
 			return
 
 		options = QtWidgets.QFileDialog.Options()
-		#options |= QtWidgets.QFileDialog.DontUseNativeDialog
 		fileName, _ = QtWidgets.QFileDialog.getSaveFileName(
 			self,
 			"Save a heatmap", 
