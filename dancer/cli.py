@@ -20,7 +20,7 @@ def cmd(args):
 		out_file = Path(args.audio_path)
 		out_file = out_file.with_suffix(".csv" if args.csv else ".funscript")
 
-	if (out_file.exists() or not args.yes):
+	if (out_file.exists() and not args.yes):
 		print("Funscript already exists!")
 		return
 
