@@ -1,0 +1,21 @@
+[tool.poetry]
+name = "dancer"
+version = "0.0.1"
+description = ""
+authors = ["Nodude"]
+
+[tool.poetry.dependencies]
+python = "^3.8"
+PyQt5 = "*"
+numpy = "<1.24"
+librosa = "==0.10.0.post2"
+matplotlib = "<3.8"
+scipy = "*"
+pyinstaller = "*"
+requests = "*"
+
+[tool.poetry.dev-dependencies]
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
