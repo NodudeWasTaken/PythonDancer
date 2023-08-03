@@ -71,7 +71,8 @@ def cmd(args):
 			).savefig(
 				out_file
 				.with_stem(out_file.stem + "_heatmap")
-				.with_suffix(".png"))
+				.with_suffix(".png"),
+				bbox_inches="tight", pad_inches=0)
 
 	print("Done!")
 
