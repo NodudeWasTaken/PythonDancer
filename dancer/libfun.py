@@ -153,7 +153,7 @@ def _speed(A, B, smax=400.0):
 def speed(A,B, **kwargs):
 	return max(min(_speed(A,B, **kwargs),1.0),0.0)
 
-def autoval(data, tpi=15, ten=300):
+def autoval(data, tpi=15, target_speed=300, v2above=0.6):
 	def cmean(pitch):
 		result = create_actions(data, energy_multiplier=0, pitch_range=pitch)
 		_,Y = map(list, zip(*result))
@@ -169,13 +169,23 @@ def autoval(data, tpi=15, ten=300):
 	def cemean(energy):
 		result = create_actions(data, energy_multiplier=energy, pitch_range=pres)
 		speeds = np.array([_speed(result[i],result[i+1],smax=1.0) for i in range(len(result)-1)], dtype=np.float32)
-		return np.average(speeds)
+		return abs(np.average(speeds) - target_speed)
 
-	def edst(e):
-		a,b = cemean(e), ten
-		return abs(a - b)
+	# V2 works abit like lazy clustering
+	# I should do more clustering
+	def cemeanv2(energy):
+		result = create_actions(data, energy_multiplier=energy, pitch_range=pres)
+		speeds = np.array([_speed(result[i], result[i+1], smax=1.0) for i in range(len(result) - 1)], dtype=np.float32)
+		
+		# Counting the number of speeds above the target speed
+		above_target = np.sum(speeds > target_speed)
+		# Calculate the percentage of speeds above the target speed
+		percentage_above_target = above_target / len(speeds)
+		
+		# Ensure at least 20% of speeds are above the target speed
+		return abs(percentage_above_target - v2above) # Ensure 20% (0.2) are above the target speed
 
-	eres = minimize(edst, (10,), method="Nelder-Mead", bounds=((0,100),))
+	eres = minimize(cemeanv2, (10,), method="Nelder-Mead", bounds=((0,100),))
 	eres = eres.x[0]
 
 	return pres, eres

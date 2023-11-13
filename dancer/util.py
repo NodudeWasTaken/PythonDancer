@@ -47,6 +47,7 @@ def cli_args():
 	parser.add_argument("--cli", help="Use commandline", action="store_true")
 	parser.add_argument("--auto_pitch", type=int, default=20, metavar="[0-100]", choices=range(0,100), help="Where you want the actions to generally lie in percent")
 	parser.add_argument("--auto_speed", type=int, default=250, metavar="[0-400]", choices=range(0,400), help="The target action speed in units/s")
+	parser.add_argument("--auto_per", type=int, default=65, metavar="[0-100]", choices=range(0,100), help="The target %\ of actions that should have a speed above the specified speed")
 	parser.add_argument("--pitch", type=int, default=100, metavar="[-200-200]", choices=range(-200,200), help="The pitch")
 	parser.add_argument("--energy", type=int, default=10, metavar="[0-100]", choices=range(0,100), help="The energy magnitude")
 	parser.add_argument("--overflow", type=int, default=0, metavar="[0-2]", choices=range(0,2), help="Overflow type")

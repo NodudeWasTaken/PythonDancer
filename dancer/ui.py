@@ -1,5 +1,5 @@
 
-import sys, os
+import sys, os, json
 from pathlib import Path
 
 import PyQt5.QtWidgets as QtWidgets
@@ -19,6 +19,24 @@ from .libfun import load_audio_data, create_actions, dump_funscript, speed, auto
 from .util import cli_args, ffmpeg_check, ffmpeg_conv
 
 plt.style.use(["ggplot", "dark_background", "fast"])
+
+class Config:
+	def __init__(self) -> None:
+		self.configfile = "config.json"
+		self.data = {}
+		if os.path.exists(self.configfile):
+			with open(self.configfile, "rb") as f:
+				self.data = json.load(f)
+	def save(self, name, val):
+		self.data[name] = val
+		with open(self.configfile, "wb") as f:
+			json.dump(self.data, f)
+	def get(self, name, default):
+		if name in self.data:
+			return self.data[name]
+		return default
+
+cfg = Config()
 
 class ImageWorker(QtCore.QObject):
 	progressed = QtCore.pyqtSignal(int, str)
@@ -65,7 +83,7 @@ class LoadWorker(ImageWorker):
 		self.pre()
 
 		if (isinstance(self.fileName, Path)):
-			audioFile = Path("tmp", self.fileName.with_suffix(".wav").name)
+			audioFile = Path(cfg.get("temporary_folder", "tmp"), self.fileName.with_suffix(".wav").name)
 			audioFile.parent.mkdir(parents=True, exist_ok=True)
 
 			if (len(self.data) <= 0):
@@ -148,7 +166,7 @@ class RenderWorker(ImageWorker):
 			#self.plot.axhline(y=np.nanmean(Y))
 
 		self.plot.set_ylim(0,100)
-		if ("at" in self.data):
+		if ("at" in self.data): #If data exists
 			self.plot.set_xlim(0,self.data["at"])
 
 		self.post()
@@ -213,8 +231,10 @@ class MainUi(QtWidgets.QMainWindow):
 		self.cmap.clicked.connect(self.cmapPressed)
 		self.stpitch = self.findChild(QtWidgets.QSpinBox, "pitchBox")
 		self.stspeed = self.findChild(QtWidgets.QSpinBox, "speedBox")
+		self.stper = self.findChild(QtWidgets.QSpinBox, "perBox")
 		self.stpitch.editingFinished.connect(self.cmapPressed)
 		self.stspeed.editingFinished.connect(self.cmapPressed)
+		self.stper.editingFinished.connect(self.cmapPressed)
 
 		self.spitch = self.findChild(QtWidgets.QSlider, "pitchSlider")
 		self.senergy = self.findChild(QtWidgets.QSlider, "energySlider")
@@ -244,6 +264,49 @@ class MainUi(QtWidgets.QMainWindow):
 			self.loadfile(args.audio_path)
 		else:
 			self.LoadWorker()
+
+		self.config_load()
+		self._cmapPressed()
+
+	def config_load(self):
+		# Load
+		OOR = cfg.get("OOR", "crop")
+		if OOR == "crop":
+			self.bcrop.setChecked(True)
+		elif OOR == "bounce":
+			self.bbounce.setChecked(True)
+		else:
+			self.bfold.setChecked(True)
+		# Save
+		self.bcrop.clicked.connect(lambda: cfg.save("OOR", "crop"))
+		self.bbounce.clicked.connect(lambda: cfg.save("OOR", "bounce"))
+		self.bfold.clicked.connect(lambda: cfg.save("OOR", "fold"))
+
+		# Load
+		self.stpitch.setValue(cfg.get("tpitch", self.stpitch.value()))
+		self.stspeed.setValue(cfg.get("tspeed", self.stspeed.value()))
+		self.stper.setValue(cfg.get("tper", self.stper.value()))
+		# Save
+		self.stpitch.editingFinished.connect(lambda: cfg.save("tpitch", self.stpitch.value()))
+		self.stspeed.editingFinished.connect(lambda: cfg.save("tspeed", self.stspeed.value()))
+		self.stper.editingFinished.connect(lambda: cfg.save("tper", self.stper.value()))
+
+		# Load
+		self.spitch.setValue(cfg.get("pitch", self.spitch.value()))
+		self.senergy.setValue(cfg.get("energy", self.senergy.value()))
+		# Save
+		self.spitch.valueChanged.connect(lambda: cfg.save("pitch", self.spitch.value()))
+		self.senergy.valueChanged.connect(lambda: cfg.save("energy", self.senergy.value()))
+
+		# Load
+		self.cheat.setChecked(cfg.get("heatmap", self.cheat.isChecked()))
+		self.cplp.setChecked(cfg.get("plp", self.cplp.isChecked()))
+		self.cmap.setChecked(cfg.get("automap", self.cmap.isChecked()))
+		# Save
+		self.cheat.clicked.connect(lambda: cfg.save("heatmap", self.cheat.isChecked()))
+		self.cplp.clicked.connect(lambda: cfg.save("plp", self.cplp.isChecked()))
+		self.cmap.clicked.connect(lambda: cfg.save("automap", self.cmap.isChecked()))
+
 
 	def resizeEvent(self, event):
 		self.resized.emit()
@@ -435,11 +498,16 @@ Thanks to you for using this software!""")
 
 	def automap(self):
 		if (self.cmap.isChecked() and len(self.data) > 0):
-			pitch, energy = autoval(self.data, tpi=self.stpitch.value(), ten=self.stspeed.value())
+			pitch, energy = autoval(self.data, tpi=self.stpitch.value(), target_speed=self.stspeed.value(), v2above=self.stper.value()/100.0)
 			self.spitch.setValue(int(pitch))
 			self.senergy.setValue(int(energy * 10.0))
 
+	def _cmapPressed(self):
+		self.stpitch.setEnabled(self.cmap.isChecked())
+		self.stspeed.setEnabled(self.cmap.isChecked())
+		self.stper.setEnabled(self.cmap.isChecked())
 	def cmapPressed(self):
+		self._cmapPressed()
 		self.automap()
 		self.RenderWorker()
 
