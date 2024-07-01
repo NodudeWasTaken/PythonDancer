@@ -119,7 +119,7 @@ class LoadWorker(ImageWorker):
 class RenderWorker(ImageWorker):
 	done = QtCore.pyqtSignal(list, QtGui.QPixmap)
 
-	def __init__(self, size, data, energy_mult, pitch_offset, overflow, heatmap):
+	def __init__(self, size, data, energy_mult, pitch_offset, overflow, heatmap, automode):
 		super().__init__()
 		self.w = size[0]
 		self.h = size[1]
@@ -128,6 +128,7 @@ class RenderWorker(ImageWorker):
 		self.pitch_offset = pitch_offset
 		self.overflow = overflow
 		self.heatmap = heatmap
+		self.automode = automode
 
 	def run(self):
 		self.pre()
@@ -229,6 +230,15 @@ class MainUi(QtWidgets.QMainWindow):
 		self.cplp.clicked.connect(self.cplpPressed)
 		self.cmap = self.findChild(QtWidgets.QCheckBox, "mapOpt")
 		self.cmap.clicked.connect(self.cmapPressed)
+
+		self.bmean = self.findChild(QtWidgets.QRadioButton, "cmeanButton")
+		self.bmean2 = self.findChild(QtWidgets.QRadioButton, "cmeanv2Button")
+		self.blen = self.findChild(QtWidgets.QRadioButton, "clenButton")
+		self.bmean.clicked.connect(self.cmapPressed)
+		self.bmean2.clicked.connect(self.cmapPressed)
+		self.blen.clicked.connect(self.cmapPressed)
+		self.automodegroup = self.findChild(QtWidgets.QGroupBox, "groupBox_automap")
+
 		self.stpitch = self.findChild(QtWidgets.QSpinBox, "pitchBox")
 		self.stspeed = self.findChild(QtWidgets.QSpinBox, "speedBox")
 		self.stper = self.findChild(QtWidgets.QSpinBox, "perBox")
@@ -281,6 +291,19 @@ class MainUi(QtWidgets.QMainWindow):
 		self.bcrop.clicked.connect(lambda: cfg.save("OOR", "crop"))
 		self.bbounce.clicked.connect(lambda: cfg.save("OOR", "bounce"))
 		self.bfold.clicked.connect(lambda: cfg.save("OOR", "fold"))
+		
+		# Load
+		AUTOMODE = cfg.get("automode", "mean2")
+		if AUTOMODE == "mean":
+			self.bmean.setChecked(True)
+		elif AUTOMODE == "mean2":
+			self.bmean2.setChecked(True)
+		else:
+			self.blen.setChecked(True)
+		# Save
+		self.bmean.clicked.connect(lambda: cfg.save("automode", "mean"))
+		self.bmean2.clicked.connect(lambda: cfg.save("automode", "mean2"))
+		self.blen.clicked.connect(lambda: cfg.save("automode", "len"))
 
 		# Load
 		self.stpitch.setValue(cfg.get("tpitch", self.stpitch.value()))
@@ -324,7 +347,13 @@ Thanks to you for using this software!""")
 			return 1
 		elif (self.bfold.isChecked()):
 			return 2
-
+	def Automode(self):
+		if self.bmean.isChecked():
+			return 0
+		elif self.bmean2.isChecked():
+			return 1
+		elif self.blen.isChecked():
+			return 2
 	def enableUX(self):
 		self.bload.setEnabled(True)
 		self.settingsPanel.setEnabled(True)
@@ -411,7 +440,8 @@ Thanks to you for using this software!""")
 			self.senergy.value() / 10.0,
 			self.spitch.value(),
 			self.OOR(),
-			self.cheat.isChecked()
+			self.cheat.isChecked(),
+			self.Automode(),
 		)
 		worker.moveToThread(thread)
 
@@ -498,14 +528,15 @@ Thanks to you for using this software!""")
 
 	def automap(self):
 		if (self.cmap.isChecked() and len(self.data) > 0):
-			pitch, energy = autoval(self.data, tpi=self.stpitch.value(), target_speed=self.stspeed.value(), v2above=self.stper.value()/100.0)
+			pitch, energy = autoval(self.data, tpi=self.stpitch.value(), target_speed=self.stspeed.value(), v2above=self.stper.value()/100.0, opt=self.Automode())
 			self.spitch.setValue(int(pitch))
 			self.senergy.setValue(int(energy * 10.0))
 
 	def _cmapPressed(self):
-		self.stpitch.setEnabled(self.cmap.isChecked())
-		self.stspeed.setEnabled(self.cmap.isChecked())
-		self.stper.setEnabled(self.cmap.isChecked())
+		#self.stpitch.setEnabled(self.cmap.isChecked())
+		#self.stspeed.setEnabled(self.cmap.isChecked())
+		#self.stper.setEnabled(self.cmap.isChecked())
+		self.automodegroup.setEnabled(self.cmap.isChecked())
 	def cmapPressed(self):
 		self._cmapPressed()
 		self.automap()

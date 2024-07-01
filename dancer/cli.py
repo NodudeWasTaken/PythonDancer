@@ -43,7 +43,7 @@ def cmd(args):
 
 	if (args.automap):
 		print("Automapping...")
-		pitch,energy = autoval(data, tpi=args.auto_pitch, target_speed=args.auto_speed, v2above=args.auto_per/100.0)
+		pitch,energy = autoval(data, tpi=args.auto_pitch, target_speed=args.auto_speed, v2above=args.auto_per/100.0, opt=(args.auto_mod-1))
 		args.pitch = pitch
 		args.energy = energy
 
