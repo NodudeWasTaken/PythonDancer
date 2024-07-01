@@ -25,11 +25,11 @@ class Config:
 		self.configfile = "config.json"
 		self.data = {}
 		if os.path.exists(self.configfile):
-			with open(self.configfile, "rb") as f:
+			with open(self.configfile, "r") as f:
 				self.data = json.load(f)
 	def save(self, name, val):
 		self.data[name] = val
-		with open(self.configfile, "wb") as f:
+		with open(self.configfile, "w") as f:
 			json.dump(self.data, f)
 	def get(self, name, default):
 		if name in self.data:
