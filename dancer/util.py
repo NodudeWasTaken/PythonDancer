@@ -36,6 +36,8 @@ def cli_args():
 		formatter_class=argparse.ArgumentDefaultsHelpFormatter
 	)
 
+	def irange(min,max):
+		return range(min, max+1)
 	parser.add_argument("audio_path", nargs='?', default=None, help="Path to input media")
 	parser.add_argument("--out_path", help="Path to export funscript")
 	parser.add_argument("--csv", help="Export as CSV instead of funscript", action="store_true")
@@ -45,12 +47,13 @@ def cli_args():
 	parser.add_argument("-y", "--yes", help="Overwrite funscript", action="store_true")
 	parser.add_argument("--no_plp", help="Disable PLP", action="store_true")
 	parser.add_argument("--cli", help="Use commandline", action="store_true")
-	parser.add_argument("--auto_pitch", type=int, default=20, metavar="[0-100]", choices=range(0,100), help="Where you want the actions to generally lie in percent")
-	parser.add_argument("--auto_speed", type=int, default=250, metavar="[0-400]", choices=range(0,400), help="The target action speed in units/s")
-	parser.add_argument("--auto_per", type=int, default=65, metavar="[0-100]", choices=range(0,100), help="The target %\ of actions that should have a speed above the specified speed")
-	parser.add_argument("--pitch", type=int, default=100, metavar="[-200-200]", choices=range(-200,200), help="The pitch")
-	parser.add_argument("--energy", type=int, default=10, metavar="[0-100]", choices=range(0,100), help="The energy magnitude")
-	parser.add_argument("--overflow", type=int, default=0, metavar="[0-2]", choices=range(0,2), help="Overflow type")
+	parser.add_argument("--auto_pitch", type=int, default=20, metavar="[0-100]", choices=irange(0,100), help="Where you want the actions to generally lie in percent")
+	parser.add_argument("--auto_speed", type=int, default=250, metavar="[0-400]", choices=irange(0,400), help="The target action speed in units/s")
+	parser.add_argument("--auto_per", type=int, default=65, metavar="[0-100]", choices=irange(0,100), help="The target percent of actions that should have a speed above the specified speed")
+	parser.add_argument("--auto_mod", type=int, default=2, metavar="[1-3]", choices=irange(1,3), help="Which optimizer to use (cmean, cmeanv2, clen)")
+	parser.add_argument("--pitch", type=int, default=100, metavar="[-200-200]", choices=irange(-200,200), help="The pitch")
+	parser.add_argument("--energy", type=int, default=10, metavar="[0-100]", choices=irange(0,100), help="The energy magnitude")
+	parser.add_argument("--overflow", type=int, default=0, metavar="[0-2]", choices=irange(0,2), help="Overflow type")
 
 	return parser
 

@@ -153,7 +153,7 @@ def _speed(A, B, smax=400.0):
 def speed(A,B, **kwargs):
 	return max(min(_speed(A,B, **kwargs),1.0),0.0)
 
-def autoval(data, tpi=15, target_speed=300, v2above=0.6):
+def autoval(data, tpi=15, target_speed=300, v2above=0.6, opt=1):
 	def cmean(pitch):
 		result = create_actions(data, energy_multiplier=0, pitch_range=pitch)
 		_,Y = map(list, zip(*result))
@@ -185,7 +185,17 @@ def autoval(data, tpi=15, target_speed=300, v2above=0.6):
 		# Ensure at least 20% of speeds are above the target speed
 		return abs(percentage_above_target - v2above) # Ensure 20% (0.2) are above the target speed
 
-	eres = minimize(cemeanv2, (10,), method="Nelder-Mead", bounds=((0,100),))
+	def celen(energy):
+		result = create_actions(data, energy_multiplier=energy, pitch_range=pres)
+		actual_percentage = np.mean([abs(result[i][1] - result[i+1][1])/100 for i in range(len(result) - 1)], dtype=np.float64)
+		return abs(actual_percentage - v2above)
+
+	optimizers = [
+		cemean,
+		cemeanv2,
+		celen
+	]
+	eres = minimize(optimizers[opt], (10,), method="Nelder-Mead", bounds=((0,100),), options={'xatol': 1e-10, 'disp': True})
 	eres = eres.x[0]
 
 	return pres, eres
@@ -232,3 +242,7 @@ def dump_funscript(f, data):
 		"range": 100,
 		"version": "1.0",
 	}, f)
+
+if __name__ == "__main__":
+	data = load_audio_data("/mnt/newfiles/Video/MBad2/inter_cgi/SUPERNOVA 2 - HMV⧸PMV [COMBOBEAT] [3373395].mp4")
+	print(data)
