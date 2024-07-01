@@ -2,6 +2,6 @@ PyQt5
 numpy<1.24
 librosa==0.10.0.post2
 matplotlib<3.8
-scipy
+scipy==1.9.3
 pyinstaller
 requests
