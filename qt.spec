@@ -8,7 +8,6 @@ a = Analysis(
 	['qt.py'],
 	pathex=[],
 	binaries=[],
-	datas=[(".",)],
 	hiddenimports=[
 		"librosa", 
 		"librosa.feature", 
