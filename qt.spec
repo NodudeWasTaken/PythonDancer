@@ -8,7 +8,7 @@ a = Analysis(
 	['qt.py'],
 	pathex=[],
 	binaries=[],
-	datas=[("dancerUI.ui",".")],
+	datas=[(".",)],
 	hiddenimports=[
 		"librosa", 
 		"librosa.feature", 
