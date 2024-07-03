@@ -1,17 +1,16 @@
+import tkinter as tk
+from tkinter import ttk, messagebox, filedialog 
 
 import sys, os, json
 from pathlib import Path
 
-import PyQt5.QtWidgets as QtWidgets
-from PyQt5 import uic
-from PyQt5 import QtGui, QtCore
-
+from threading import Thread
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 from matplotlib.collections import LineCollection
 from matplotlib.figure import Figure
-from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg as FigureCanvas
 
 from .cli import cmd
 
@@ -38,9 +37,29 @@ class Config:
 
 cfg = Config()
 
-class ImageWorker(QtCore.QObject):
-	progressed = QtCore.pyqtSignal(int, str)
-	finished = QtCore.pyqtSignal()
+
+# Thanks to https://stackoverflow.com/a/61253373
+def disableChildren(parent):
+	for child in parent.winfo_children():
+		wtype = child.winfo_class()
+		if wtype not in ('Frame','Labelframe','TFrame','TLabelframe'):
+			child.configure(state='disable')
+		else:
+			disableChildren(child)
+
+def enableChildren(parent):
+	for child in parent.winfo_children():
+		wtype = child.winfo_class()
+		#print (wtype)
+		if wtype not in ('Frame','Labelframe','TFrame','TLabelframe'):
+			child.configure(state='normal')
+		else:
+			enableChildren(child)
+
+class ImageWorker:
+	progressed = None
+	finished = None
+	w,h = 0,0
 
 	def pre(self):
 		# the figure that will contain the plot
@@ -51,34 +70,34 @@ class ImageWorker(QtCore.QObject):
 		self.plot = self.fig.add_subplot(111)
 
 		# canvas to draw on
-		self.canvas = FigureCanvas(self.fig)
+		#self.canvas = FigureCanvas(self.fig)
 
 	def post(self):
-		self.progressed.emit(90, "Drawing...")
+		self.progressed(90, "Drawing...")
 
-		self.canvas.draw()
+		#self.canvas.draw()
 
-		w, h = self.canvas.get_width_height()
-		ch = 4
-		bytesPerLine = ch * w
-		im = QtGui.QImage(self.canvas.buffer_rgba(), w, h, bytesPerLine, QtGui.QImage.Format_RGBA8888)
-		self.img = QtGui.QPixmap(im)
+		#w, h = self.canvas.get_width_height()
+		#ch = 4
+		#bytesPerLine = ch * w
+		#im = QtGui.QImage(self.canvas.buffer_rgba(), w, h, bytesPerLine, QtGui.QImage.Format_RGBA8888)
+		#self.img = QtGui.QPixmap(im)
+		#buf = self.canvas.buffer_rgba()
 
-		self.progressed.emit(100, "Done!")
+		self.progressed(100, "Done!")
 
 class LoadWorker(ImageWorker):
-	done = QtCore.pyqtSignal(dict, QtGui.QPixmap, bool)
+	done = None
 
 	def __init__(self, size, fileName, data, plp):
 		super().__init__()
-		self.w = size[0]
-		self.h = size[1]
+		self.w, self.h = size
 		self.fileName = fileName
 		self.data = data
 		self.plp = plp
 
 	def run(self):
-		self.progressed.emit(5, "Converting to wav...")
+		self.progressed(5, "Converting to wav...")
 
 		self.pre()
 
@@ -90,20 +109,20 @@ class LoadWorker(ImageWorker):
 				try:
 					ffmpeg_conv(self.fileName, audioFile)
 				except:
-					self.progressed.emit(-1, "Failed to convert to wav!")
-					self.finished.emit()
+					self.progressed(-1, "Failed to convert to wav!")
+					self.finished()
 					return
 
-				self.progressed.emit(20, "Transforming audio data...")
+				self.progressed(20, "Transforming audio data...")
 
 			try:
 				self.data = load_audio_data(audioFile, plp=self.plp)
 			except:
-				self.progressed.emit(-1, "Failed to transform audio data!")
-				self.finished.emit()
+				self.progressed(-1, "Failed to transform audio data!")
+				self.finished()
 				return
 
-			self.progressed.emit(50, "Plotting waveforms...")
+			self.progressed(50, "Plotting waveforms...")
 
 		if len(self.data) > 0:
 			# plotting the graph
@@ -113,16 +132,16 @@ class LoadWorker(ImageWorker):
 
 		self.post()
 
-		self.done.emit(self.data, self.img, isinstance(self.fileName, Path))
-		self.finished.emit()
+		self.done(self.data, self.fig, isinstance(self.fileName, Path))
+		self.finished()
+
 
 class RenderWorker(ImageWorker):
-	done = QtCore.pyqtSignal(list, QtGui.QPixmap)
+	done = None
 
 	def __init__(self, size, data, energy_mult, pitch_offset, overflow, heatmap, automode):
 		super().__init__()
-		self.w = size[0]
-		self.h = size[1]
+		self.w, self.h = size
 		self.data = data
 		self.energy_mult = energy_mult
 		self.pitch_offset = pitch_offset
@@ -135,7 +154,7 @@ class RenderWorker(ImageWorker):
 		result = []
 
 		if len(self.data) > 0:
-			self.progressed.emit(50, "Creating actions...")
+			self.progressed(50, "Creating actions...")
 
 			# plotting the graph
 			try:
@@ -145,9 +164,10 @@ class RenderWorker(ImageWorker):
 					pitch_range=self.pitch_offset,
 					overflow=self.overflow
 				)
-			except:
-				self.progressed.emit(-1, "Failed to create actions!")
-				self.finished.emit()
+			except Exception as e:
+				print(e)
+				self.progressed(-1, "Failed to create actions!")
+				self.finished()
 				return
 
 			# plotting the graph
@@ -172,104 +192,207 @@ class RenderWorker(ImageWorker):
 
 		self.post()
 
-		self.done.emit(result, self.img)
-		self.finished.emit()
+		self.done(result, self.fig)
+		self.finished()
 
-# Define function to import external files when using PyInstaller.
-# https://stackoverflow.com/a/37920111
-def resource_path(relative_path):
-	""" Get absolute path to resource, works for dev and for PyInstaller """
-	try:
-		# PyInstaller creates a temp folder and stores path in _MEIPASS
-		base_path = sys._MEIPASS
-	except Exception:
-		base_path = os.path.abspath(".")
-
-	return os.path.join(base_path, relative_path)
-
-uiForm = resource_path("dancerUI.ui")
-class MainUi(QtWidgets.QMainWindow):
-	resized = QtCore.pyqtSignal()
-
+class MainWindow(tk.Tk):
 	def __init__(self, args):
-		super(MainUi, self).__init__()
-		uic.loadUi(uiForm, self)
-		self.setWindowTitle(f"PythonDancer {VERSION}")
+		super().__init__()
+
+		self.title(f"PythonDancer {VERSION}")
+		self.geometry("711x980")
+		self.minsize(711, 980)
+
+		# Central widget layout
+		central_frame = ttk.Frame(self)
+		central_frame.grid(row=0, column=0, sticky="nsew")
+		
+		# Configure grid for central_frame
+		self.columnconfigure(0, weight=1)
+		self.rowconfigure(0, weight=1)
+		central_frame.columnconfigure(0, weight=1)
+		central_frame.rowconfigure(1, weight=3)  # Audio data section gets more weight
+
+		# Media GroupBox
+		media_group = ttk.LabelFrame(central_frame, text="Media")
+		media_group.grid(row=0, column=0, sticky="ew", padx=5, pady=5)
+		media_group.columnconfigure(2, weight=1)
+
+		self.about_button = ttk.Button(media_group, text="About")
+		self.about_button.grid(row=0, column=0, padx=5, pady=5)
+
+		self.load_button = ttk.Button(media_group, text="Load")
+		self.load_button.grid(row=0, column=1, padx=5, pady=5)
+
+		progress_frame = ttk.Frame(media_group)
+		progress_frame.grid(row=0, column=2, padx=5, pady=5, sticky="ew")
+		progress_frame.columnconfigure(0, weight=1)
+
+		self.progress_label = ttk.Label(progress_frame, text="TextLabel")
+		self.progress_label.grid(row=0, column=0, sticky="ew")
+
+		self.progress_bar = ttk.Progressbar(progress_frame, value=0, maximum=100)
+		self.progress_bar.grid(row=1, column=0, sticky="ew")
+
+		# Audio Data GroupBox
+		audio_group = ttk.LabelFrame(central_frame, text="Audio Data")
+		audio_group.grid(row=1, column=0, sticky="nsew", padx=5, pady=5)
+		audio_group.columnconfigure(0, weight=1)
+		audio_group.rowconfigure(0, weight=1)
+		audio_group.rowconfigure(1, weight=1)
+
+		self.audio_input = tk.Canvas(audio_group, bg="white")
+		self.audio_input.grid(row=0, column=0, sticky="nsew", padx=5, pady=5)
+		self.audio_input.columnconfigure(0, weight=1)
+		self.audio_input.rowconfigure(0, weight=1)
+
+		self.audioi_canvas = FigureCanvas(master=self.audio_input)
+		self.audioi_canvas.draw()
+		self.audioi_canvas.get_tk_widget().grid(row=0, column=0, sticky="nsew", padx=5, pady=5)
+
+		self.audio_output = tk.Canvas(audio_group, bg="white")
+		self.audio_output.grid(row=1, column=0, sticky="nsew", padx=5, pady=5)
+		self.audio_output.columnconfigure(0, weight=1)
+		self.audio_output.rowconfigure(0, weight=1)
+
+		self.audioo_canvas = FigureCanvas(master=self.audio_output)
+		self.audioo_canvas.draw()
+		self.audioo_canvas.get_tk_widget().grid(row=0, column=0, sticky="nsew", padx=5, pady=5)
+
+		# Settings GroupBox
+		self.settings_group = ttk.LabelFrame(central_frame, text="Settings")
+		self.settings_group.grid(row=2, column=0, sticky="ew", padx=5, pady=5)
+		self.settings_group.columnconfigure(2, weight=1)
+
+		pitch_group = ttk.LabelFrame(self.settings_group, text="Pitch -> Offset")
+		pitch_group.grid(row=0, column=0, sticky="ns", padx=5, pady=5)
+		pitch_group.rowconfigure(0, weight=1)
+
+		self.pitch_slider = ttk.Scale(pitch_group, orient=tk.VERTICAL, from_=200, to=-200, value=100)
+		self.pitch_slider.grid(row=0, column=0, sticky="ns")
+
+		energy_group = ttk.LabelFrame(self.settings_group, text="Energy -> Magnitude")
+		energy_group.grid(row=0, column=1, sticky="ns", padx=5, pady=5)
+		energy_group.rowconfigure(0, weight=1)
+
+		self.energy_slider = ttk.Scale(energy_group, orient=tk.VERTICAL, from_=100, to=0, value=10)
+		self.energy_slider.grid(row=0, column=0, sticky="ns")
+
+		options_group = ttk.LabelFrame(self.settings_group, text="Options")
+		options_group.grid(row=0, column=2, sticky="ew", padx=5, pady=5)
+		options_group.columnconfigure(1, weight=1)
+		options_group.rowconfigure(0, weight=1)
+
+		range_group = ttk.LabelFrame(options_group, text="Out of range")
+		range_group.grid(row=0, column=0, sticky="ns", padx=5, pady=5)
+		range_group.columnconfigure(0, weight=1)
+
+		self.var_oor = tk.StringVar(value="crop")
+		self.crop_button = ttk.Radiobutton(range_group, text="Crop", variable=self.var_oor, value="crop")
+		self.crop_button.grid(row=0, column=0, sticky="w")
+
+		self.bounce_button = ttk.Radiobutton(range_group, text="Bounce", variable=self.var_oor, value="bounce")
+		self.bounce_button.grid(row=1, column=0, sticky="w")
+
+		self.fold_button = ttk.Radiobutton(range_group, text="Fold", variable=self.var_oor, value="fold")
+		self.fold_button.grid(row=2, column=0, sticky="w")
+
+		misc_group = ttk.LabelFrame(options_group, text="Misc")
+		misc_group.grid(row=0, column=1, sticky="ns", padx=5, pady=5)
+		misc_group.columnconfigure(0, weight=1)
+
+		self.heatmap_var = tk.BooleanVar(value=True)
+		self.heatmap_check = ttk.Checkbutton(misc_group, text="Heatmap", variable=self.heatmap_var)
+		self.heatmap_check.grid(row=0, column=0, sticky="w")
+
+		self.plp_var = tk.BooleanVar(value=True)
+		self.plp_check = ttk.Checkbutton(misc_group, text="PLP estimation", variable=self.plp_var)
+		self.plp_check.grid(row=1, column=0, sticky="w")
+
+		self.map_var = tk.BooleanVar(value=True)
+		self.map_check = ttk.Checkbutton(misc_group, text="Automap", variable=self.map_var)
+		self.map_check.grid(row=2, column=0, sticky="w")
+
+		self.automap_group = ttk.LabelFrame(options_group, text="Automap settings")
+		self.automap_group.grid(row=0, column=2, sticky="ew", padx=5, pady=5)
+		self.automap_group.columnconfigure(0, weight=1)
+
+		self.var_automap = tk.StringVar(value="meanv2")
+		self.mean_button = ttk.Radiobutton(self.automap_group, text="Mean", variable=self.var_automap, value="mean")
+		self.mean_button.grid(row=0, column=0, sticky="w")
+
+		self.meanv2_button = ttk.Radiobutton(self.automap_group, text="MeanV2", variable=self.var_automap, value="meanv2")
+		self.meanv2_button.grid(row=1, column=0, sticky="w")
+
+		self.length_button = ttk.Radiobutton(self.automap_group, text="Length", variable=self.var_automap, value="length")
+		self.length_button.grid(row=2, column=0, sticky="w")
+
+		speed_frame = ttk.Frame(self.automap_group)
+		speed_frame.grid(row=3, column=0, sticky="ew", pady=5)
+		speed_frame.columnconfigure(1, weight=1)
+
+		speed_label = ttk.Label(speed_frame, text="Target Speed")
+		speed_label.grid(row=0, column=0)
+
+		self.speed_spinbox_var = tk.IntVar(value=250)
+		self.speed_spinbox = tk.Spinbox(speed_frame, from_=0, to=500, width=5, textvariable=self.speed_spinbox_var)
+		self.speed_spinbox.grid(row=0, column=1, padx=5)
+
+		pitch_frame = ttk.Frame(self.automap_group)
+		pitch_frame.grid(row=4, column=0, sticky="ew", pady=5)
+		pitch_frame.columnconfigure(1, weight=1)
+
+		pitch_label = ttk.Label(pitch_frame, text="Target Pitch")
+		pitch_label.grid(row=0, column=0)
+
+		self.pitch_spinbox_var = tk.IntVar(value=20)
+		self.pitch_spinbox = tk.Spinbox(pitch_frame, from_=0, to=100, width=5, textvariable=self.pitch_spinbox_var)
+		self.pitch_spinbox.grid(row=0, column=1, padx=5)
+
+		per_frame = ttk.Frame(self.automap_group)
+		per_frame.grid(row=5, column=0, sticky="ew", pady=5)
+		per_frame.columnconfigure(1, weight=1)
+
+		per_label = ttk.Label(per_frame, text="Target %")
+		per_label.grid(row=0, column=0)
+
+		self.per_spinbox_var = tk.IntVar(value=65)
+		self.per_spinbox = tk.Spinbox(per_frame, from_=0, to=100, width=5, textvariable=self.per_spinbox_var)
+		self.per_spinbox.grid(row=0, column=1, padx=5)
+
+		# Export GroupBox
+		export_group = ttk.LabelFrame(central_frame, text="Export")
+		export_group.grid(row=3, column=0, sticky="ew", padx=5, pady=5)
+		export_group.columnconfigure(1, weight=1)
+
+		self.funscript_button = ttk.Button(export_group, text="Funscript")
+		self.funscript_button.grid(row=0, column=0, padx=5, pady=5, sticky="ew")
+
+		self.heatmap_button = ttk.Button(export_group, text="Heatmap")
+		self.heatmap_button.grid(row=0, column=1, padx=5, pady=5, sticky="ew")
+		self.funscript_button["state"] = "disabled"
+		self.heatmap_button["state"] = "disabled"
+	
+		self.ready(args)
+
+	def ready(self, args):
 		self.fileName = None
 		self.data = {}
 		self.result = None
 
-		self.babout = self.findChild(QtWidgets.QToolButton, "aboutButton")
-		self.bload = self.findChild(QtWidgets.QToolButton, "mediaButton")
-		self.babout.clicked.connect(self.baboutPressed)
-		self.bload.clicked.connect(self.bloadPressed)
-		self.pbat = self.findChild(QtWidgets.QProgressBar, "progressBar")
-		self.plabel = self.findChild(QtWidgets.QLabel, "progressLabel")
-
-		self.ginput = self.findChild(QtWidgets.QGraphicsView, "audioInput")
-		self.goutput = self.findChild(QtWidgets.QGraphicsView, "audioOutput")
-		self.gsinput = QtWidgets.QGraphicsScene()
-		self.gsoutput = QtWidgets.QGraphicsScene()
-		self.ginput.setScene(self.gsinput)
-		self.goutput.setScene(self.gsoutput)
-		self.ginput.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
-		self.ginput.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
-		self.goutput.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
-		self.goutput.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
-
-		self.bbounce = self.findChild(QtWidgets.QRadioButton, "bounceButton")
-		self.bcrop = self.findChild(QtWidgets.QRadioButton, "cropButton")
-		self.bfold = self.findChild(QtWidgets.QRadioButton, "foldButton")
-		self.bbounce.clicked.connect(self.RenderWorker)
-		self.bcrop.clicked.connect(self.RenderWorker)
-		self.bfold.clicked.connect(self.RenderWorker)
-
-		self.cheat = self.findChild(QtWidgets.QCheckBox, "heatOpt")
-		self.cheat.clicked.connect(self.cheatPressed)
-		self.cplp = self.findChild(QtWidgets.QCheckBox, "plpOpt")
-		self.cplp.clicked.connect(self.cplpPressed)
-		self.cmap = self.findChild(QtWidgets.QCheckBox, "mapOpt")
-		self.cmap.clicked.connect(self.cmapPressed)
-
-		self.bmean = self.findChild(QtWidgets.QRadioButton, "cmeanButton")
-		self.bmean2 = self.findChild(QtWidgets.QRadioButton, "cmeanv2Button")
-		self.blen = self.findChild(QtWidgets.QRadioButton, "clenButton")
-		self.bmean.clicked.connect(self.cmapPressed)
-		self.bmean2.clicked.connect(self.cmapPressed)
-		self.blen.clicked.connect(self.cmapPressed)
-		self.automodegroup = self.findChild(QtWidgets.QGroupBox, "groupBox_automap")
-
-		self.stpitch = self.findChild(QtWidgets.QSpinBox, "pitchBox")
-		self.stspeed = self.findChild(QtWidgets.QSpinBox, "speedBox")
-		self.stper = self.findChild(QtWidgets.QSpinBox, "perBox")
-		self.stpitch.editingFinished.connect(self.cmapPressed)
-		self.stspeed.editingFinished.connect(self.cmapPressed)
-		self.stper.editingFinished.connect(self.cmapPressed)
-
-		self.spitch = self.findChild(QtWidgets.QSlider, "pitchSlider")
-		self.senergy = self.findChild(QtWidgets.QSlider, "energySlider")
-		self.spitch.valueChanged.connect(self.RenderWorker)
-		self.senergy.valueChanged.connect(self.RenderWorker)
-
-		self.bfunscript = self.findChild(QtWidgets.QPushButton, "funscriptButton")
-		self.bheatmap = self.findChild(QtWidgets.QPushButton, "heatmapButton")
-		self.bfunscript.clicked.connect(self.bfunscriptPressed)
-		self.bheatmap.clicked.connect(self.bheatmapPressed)
-
-		self.settingsPanel = self.findChild(QtWidgets.QGroupBox, "groupBox_2")
-
-		self.__loadworker = QtCore.QThread()
-		self.__renderworker = QtCore.QThread()
+		self.__loadworker = Thread()
+		self.__renderworker = Thread()
 		self.__waitloader = None
 
-		self.resized.connect(self.LoadWorker)
-
-		self.bfunscript.setEnabled(False)
-		self.bheatmap.setEnabled(False)
+		self.about_button.bind("<Button-1>", lambda event: messagebox.showinfo("About", """Thanks to ncdxncdx for the original application!
+Thanks to Nodude for the Python port!
+Thanks to you for using this software!""") )
+		self.load_button.bind("<Button-1>", self.loadPressed)
+		# TODO: More binds
 
 		if (ffmpeg_check()):
 			self.disableUX()
-			self.plabel.setText("FFMpeg is missing, please download it!")
+			self.progress_label["text"] = "FFMpeg is missing, please download it!"
 		elif (args.audio_path):
 			self.loadfile(args.audio_path)
 		else:
@@ -281,143 +404,132 @@ class MainUi(QtWidgets.QMainWindow):
 	def config_load(self):
 		# Load
 		OOR = cfg.get("OOR", "crop")
-		if OOR == "crop":
-			self.bcrop.setChecked(True)
-		elif OOR == "bounce":
-			self.bbounce.setChecked(True)
-		else:
-			self.bfold.setChecked(True)
+		self.var_oor.set(OOR)
 		# Save
-		self.bcrop.clicked.connect(lambda: cfg.save("OOR", "crop"))
-		self.bbounce.clicked.connect(lambda: cfg.save("OOR", "bounce"))
-		self.bfold.clicked.connect(lambda: cfg.save("OOR", "fold"))
+		self.var_oor.trace("w", lambda *args: cfg.save("OOR", self.var_oor.get()))
 		
 		# Load
-		AUTOMODE = cfg.get("automode", "mean2")
-		if AUTOMODE == "mean":
-			self.bmean.setChecked(True)
-		elif AUTOMODE == "mean2":
-			self.bmean2.setChecked(True)
-		else:
-			self.blen.setChecked(True)
+		AUTOMODE = cfg.get("automode", "meanv2")
+		self.var_automap.set(AUTOMODE)
 		# Save
-		self.bmean.clicked.connect(lambda: cfg.save("automode", "mean"))
-		self.bmean2.clicked.connect(lambda: cfg.save("automode", "mean2"))
-		self.blen.clicked.connect(lambda: cfg.save("automode", "len"))
+		self.var_automap.trace("w", lambda *args: cfg.save("automode", self.var_automap.get()))
 
 		# Load
-		self.stpitch.setValue(cfg.get("tpitch", self.stpitch.value()))
-		self.stspeed.setValue(cfg.get("tspeed", self.stspeed.value()))
-		self.stper.setValue(cfg.get("tper", self.stper.value()))
+		self.pitch_spinbox_var.set(cfg.get("tpitch", self.pitch_spinbox_var.get()))
+		self.speed_spinbox_var.set(cfg.get("tspeed", self.speed_spinbox_var.get()))
+		self.per_spinbox_var.set(cfg.get("tper", self.per_spinbox_var.get()))
 		# Save
-		self.stpitch.editingFinished.connect(lambda: cfg.save("tpitch", self.stpitch.value()))
-		self.stspeed.editingFinished.connect(lambda: cfg.save("tspeed", self.stspeed.value()))
-		self.stper.editingFinished.connect(lambda: cfg.save("tper", self.stper.value()))
+		self.pitch_spinbox_var.trace("w", lambda *args: cfg.save("tpitch", self.pitch_spinbox_var.get()))
+		self.speed_spinbox_var.trace("w", lambda *args: cfg.save("tspeed", self.speed_spinbox_var.get()))
+		self.per_spinbox_var.trace("w", lambda *args: cfg.save("tper", self.per_spinbox_var.get()))
 
 		# Load
-		self.spitch.setValue(cfg.get("pitch", self.spitch.value()))
-		self.senergy.setValue(cfg.get("energy", self.senergy.value()))
+		self.pitch_slider["value"] = cfg.get("pitch", self.pitch_slider.get())
+		self.energy_slider["value"] = cfg.get("energy", self.energy_slider.get())
 		# Save
-		self.spitch.valueChanged.connect(lambda: cfg.save("pitch", self.spitch.value()))
-		self.senergy.valueChanged.connect(lambda: cfg.save("energy", self.senergy.value()))
+		self.pitch_slider.bind("<ButtonRelease-1>", lambda x: cfg.save("pitch", self.pitch_slider.get()))
+		self.energy_slider.bind("<ButtonRelease-1>", lambda x: cfg.save("energy", self.energy_slider.get()))
 
 		# Load
-		self.cheat.setChecked(cfg.get("heatmap", self.cheat.isChecked()))
-		self.cplp.setChecked(cfg.get("plp", self.cplp.isChecked()))
-		self.cmap.setChecked(cfg.get("automap", self.cmap.isChecked()))
+		self.heatmap_var.set(cfg.get("heatmap", self.heatmap_var.get()))
+		self.plp_var.set(cfg.get("plp", self.plp_var.get()))
+		self.map_var.set(cfg.get("automap", self.map_var.get()))
 		# Save
-		self.cheat.clicked.connect(lambda: cfg.save("heatmap", self.cheat.isChecked()))
-		self.cplp.clicked.connect(lambda: cfg.save("plp", self.cplp.isChecked()))
-		self.cmap.clicked.connect(lambda: cfg.save("automap", self.cmap.isChecked()))
+		self.heatmap_var.trace("w", lambda *args: cfg.save("heatmap", self.heatmap_var.get()))
+		self.plp_var.trace("w", lambda *args: cfg.save("plp", self.plp_var.get()))
+		self.map_var.trace("w", lambda *args: cfg.save("automap", self.map_var.get()))
+
+		# Triggers
+		self.var_oor.trace("w", lambda *args: self.RenderWorker())
+
+		self.heatmap_var.trace("w", lambda *args: self.RenderWorker())
+		self.plp_var.trace("w", lambda *args: self.LoadWorker(self.fileName))
+		self.map_var.trace("w", lambda *args: self.cmapPressed())
+
+		self.var_automap.trace("w", lambda *args: self.cmapPressed())
+
+		self.pitch_spinbox_var.trace("w", lambda *args: self.cmapPressed())
+		self.speed_spinbox_var.trace("w", lambda *args: self.cmapPressed())
+		self.per_spinbox_var.trace("w", lambda *args: self.cmapPressed())
+
+		self.pitch_slider.bind("<ButtonRelease-1>", lambda x: self.RenderWorker())
+		self.energy_slider.bind("<ButtonRelease-1>", lambda x: self.RenderWorker())
+
+		self.funscript_button.bind("<Button-1>", lambda x: self.bfunscriptPressed())
+		self.heatmap_button.bind("<Button-1>", lambda x: self.bheatmapPressed())
 
 
-	def resizeEvent(self, event):
-		self.resized.emit()
-		return super(MainUi, self).resizeEvent(event)
+	def loadPressed(self, event):
+		filetypes = (
+			('Media files', '*.*'),
+		)
 
-	def baboutPressed(self):
-		QtWidgets.QMessageBox.about(self, "About", """Thanks to ncdxncdx for the original application!
-Thanks to Nodude for the Python port!
-Thanks to you for using this software!""")
+		fileName = filedialog.askopenfilename(
+			title='Open a media file',
+			filetypes=filetypes
+		)
 
-	def OOR(self):
-		if (self.bcrop.isChecked()):
-			return 0
-		elif (self.bbounce.isChecked()):
-			return 1
-		elif (self.bfold.isChecked()):
-			return 2
-	def Automode(self):
-		if self.bmean.isChecked():
-			return 0
-		elif self.bmean2.isChecked():
-			return 1
-		elif self.blen.isChecked():
-			return 2
-	def enableUX(self):
-		self.bload.setEnabled(True)
-		self.settingsPanel.setEnabled(True)
-	def disableUX(self):
-		self.bload.setEnabled(False)
-		self.settingsPanel.setEnabled(False)
+		if fileName:
+			self.loadfile(fileName)
+
+	def loadfile(self, fileName):
+		self.fileName = Path(fileName)
+		self.title(f"PythonDancer {VERSION} - {self.fileName.name}")
+		self.progress_label["text"] = f"Opening video: {self.fileName.name}"
+		self.data = {}
+		self.disableUX()
+		self.LoadWorker(self.fileName)
 
 	def __load_done(self, data, img, init):
 		self.data = data
 		if (init):
 			self.automap()
-			self.bfunscript.setEnabled(True)
-			self.bheatmap.setEnabled(True)
+			self.funscript_button["state"] = "normal"
+			self.heatmap_button["state"] = "normal"
 
 		self.RenderWorker()
-		self.gsinput.clear()
-		gfxPixItem = self.gsinput.addPixmap(img)
-		self.ginput.fitInView(gfxPixItem)
+		self.audioi_canvas.figure = img
+		self.audioi_canvas.draw()
 		self.enableUX()
 
 	def __load_prog(self, val, s):
-		self.pbat.setValue(val)
-		self.plabel.setText(s)
+		self.progress_bar["value"] = val
+		self.progress_label["text"] = s
 		if (val == -1):
 			self.enableUX()
 
-	def __load_thread(self, fileName=None):
-		thread = QtCore.QThread()
+	def __load_thread(self, fileName=None) -> Thread:
 		worker = LoadWorker(
 			(
-				self.ginput.width(),
-				self.ginput.height()
+				self.audio_input.winfo_width(),
+				self.audio_input.winfo_height()
 			),
 			fileName,
 			self.data,
-			self.cplp.isChecked()
+			self.plp_var.get()
 		)
-		worker.moveToThread(thread)
+		thread = Thread(target=worker.run)
 
-		# this is essential when worker is in local scope!
-		thread.worker = worker
-
-		thread.started.connect(worker.run)
-		worker.done.connect(self.__load_done)
-		worker.progressed.connect(self.__load_prog)
-		worker.finished.connect(thread.quit)
+		worker.done = self.__load_done
+		worker.progressed = self.__load_prog
+		worker.finished = lambda: None
 
 		return thread
 
 	def LoadWorker(self, fileName=None):
-		if not self.__loadworker.isRunning():
+		if not self.__loadworker.is_alive():
 			self.__loadworker = self.__load_thread(fileName)
 			self.__loadworker.start()
 
 	def __render_done(self, result, img):
 		self.result = result
-		self.gsoutput.clear()
-		gfxPixItem = self.gsoutput.addPixmap(img)
-		self.goutput.fitInView(gfxPixItem)
+		self.audioo_canvas.figure = img
+		self.audioo_canvas.draw()
 
 	def __render_repeat_aux(self):
 		#TODO: While loop it without UI freeze
-		if (self.__renderworker.isRunning()):
-			QtCore.QTimer.singleShot(10, self.__render_repeat_aux)
+		if (self.__renderworker.is_alive()):
+			self.after(10, self.__render_repeat_aux)
 			return
 
 		if (self.__waitloader != None):
@@ -427,126 +539,121 @@ Thanks to you for using this software!""")
 			self.__renderworker.start()
 
 	def __render_repeat(self):
-		QtCore.QTimer.singleShot(10, self.__render_repeat_aux)
+		self.after(10, self.__render_repeat_aux)
 
-	def __render_thread(self):
-		thread = QtCore.QThread()
+	def __render_thread(self) -> Thread:
 		worker = RenderWorker(
 			(
-				self.goutput.width(),
-				self.goutput.height()
+				self.audio_output.winfo_width(),
+				self.audio_output.winfo_height()
 			),
 			self.data,
-			self.senergy.value() / 10.0,
-			self.spitch.value(),
+			self.energy_slider.get() / 10.0,
+			self.pitch_slider.get(),
 			self.OOR(),
-			self.cheat.isChecked(),
+			self.heatmap_var.get(),
 			self.Automode(),
 		)
-		worker.moveToThread(thread)
+		thread = Thread(target=worker.run)
 
-		# this is essential when worker is in local scope!
-		thread.worker = worker
-
-		thread.started.connect(worker.run)
-		worker.done.connect(self.__render_done)
-		worker.progressed.connect(self.__load_prog)
-		worker.finished.connect(self.__render_repeat)
-		worker.finished.connect(thread.quit)
+		worker.done = self.__render_done
+		worker.progressed = self.__load_prog
+		worker.finished = self.__render_repeat
 
 		return thread
 
 	def RenderWorker(self):
-		if not self.__renderworker.isRunning():
+		if not self.__renderworker.is_alive():
 			self.__renderworker = self.__render_thread()
 			self.__renderworker.start()
 		else:
 			self.__waitloader = True
 
-	def loadfile(self, fileName):
-		self.fileName = Path(fileName)
-		self.setWindowTitle(f"PythonDancer {VERSION} - {self.fileName.name}")
-		self.plabel.setText(f"Opening video: {self.fileName.name}")
-		self.data = {}
-		self.disableUX()
-		self.LoadWorker(self.fileName)
+	def enableUX(self):
+		self.load_button["state"] = "normal"
+		enableChildren(self.settings_group)
+	def disableUX(self):
+		self.load_button["state"] = "disabled"
+		disableChildren(self.settings_group)
 
-	def bloadPressed(self):
-		options = QtWidgets.QFileDialog.Options()
-		fileName, _ = QtWidgets.QFileDialog.getOpenFileName(
-			self,
-			"Open a media file", 
-			"",
-			"Media Files (*);", 
-			options=options
-		)
-		if fileName:
-			self.loadfile(fileName)
+	def automap(self):
+		if (self.map_var.get() and len(self.data) > 0):
+			pitch, energy = autoval(self.data, tpi=self.pitch_spinbox_var.get(), target_speed=self.speed_spinbox_var.get(), v2above=self.per_spinbox_var.get()/100.0, opt=self.Automode())
+			self.pitch_slider["value"] = int(pitch)
+			self.energy_slider["value"] = int(energy * 10.0)
 
+	def OOR(self):
+		if self.var_oor.get() == "crop":
+			return 0
+		elif self.var_oor.get() == "bounce":
+			return 1
+		else: # fold
+			return 2
+	def Automode(self):
+		if self.var_automap.get() == "mean":
+			return 0
+		elif self.var_automap.get() == "meanv2":
+			return 1
+		else: # length
+			return 2
+
+	def _cmapPressed(self):
+		if self.map_var.get():
+			enableChildren(self.automap_group)
+		else:
+			disableChildren(self.automap_group)
+	def cmapPressed(self):
+		self._cmapPressed()
+		self.automap()
+		self.RenderWorker()
+		
 	def bfunscriptPressed(self):
 		if (not self.result):
 			return
 
-		options = QtWidgets.QFileDialog.Options()
-		fileName, _ = QtWidgets.QFileDialog.getSaveFileName(
-			self,
-			"Save a funscript", 
-			str(self.fileName.with_suffix(".funscript").resolve()), 
-			"Funscript Files (*.funscript)", 
-			options=options
-		)
+		initial_file = str(self.fileName.with_suffix(".funscript").name)
+		options = {
+			"title": "Save a funscript",
+			"initialfile": initial_file,  # Initial file name
+			"filetypes": [("Funscript Files", "*.funscript")],  # File types filter
+		}
+
+		fileName = filedialog.asksaveasfilename(**options)
+
 		if fileName:
 			with open(fileName, "w") as f:
 				dump_funscript(f, self.result)
+		else:
+			print("File save cancelled.")
 
 	def bheatmapPressed(self):
 		if (len(self.data) <= 0):
 			return
 
-		options = QtWidgets.QFileDialog.Options()
-		fileName, _ = QtWidgets.QFileDialog.getSaveFileName(
-			self,
-			"Save a heatmap", 
-			str(self.fileName.with_stem(self.fileName.stem + "_heatmap").with_suffix(".png").resolve()), 
-			"PNG Files (*.png)", 
-			options=options
-		)
+		initial_file = str(self.fileName.with_stem(self.fileName.stem + "_heatmap").with_suffix(".png").name)
+		options = {
+			'defaultextension': '.png',
+			'filetypes': [('PNG Files', '.png')],
+			'initialfile': initial_file,
+			'title': 'Save a heatmap'
+		}
+
+		fileName = filedialog.asksaveasfilename(**options)
 		if fileName:
 			fig = render_heatmap(
 				self.data, 
-				self.senergy.value() / 10.0,
-				self.spitch.value(),
+				self.energy_slider.get() / 10.0,
+				self.pitch_slider.get(),
 				self.OOR()
 			)
 			fig.savefig(fileName, bbox_inches="tight", pad_inches=0)
+		else:
+			print("File save cancelled.")
 
-	def cplpPressed(self):
-		self.LoadWorker(self.fileName)
-
-	def cheatPressed(self):
-		self.RenderWorker()
-
-	def automap(self):
-		if (self.cmap.isChecked() and len(self.data) > 0):
-			pitch, energy = autoval(self.data, tpi=self.stpitch.value(), target_speed=self.stspeed.value(), v2above=self.stper.value()/100.0, opt=self.Automode())
-			self.spitch.setValue(int(pitch))
-			self.senergy.setValue(int(energy * 10.0))
-
-	def _cmapPressed(self):
-		#self.stpitch.setEnabled(self.cmap.isChecked())
-		#self.stspeed.setEnabled(self.cmap.isChecked())
-		#self.stper.setEnabled(self.cmap.isChecked())
-		self.automodegroup.setEnabled(self.cmap.isChecked())
-	def cmapPressed(self):
-		self._cmapPressed()
-		self.automap()
-		self.RenderWorker()
 
 def ux(args):
-	app = QtWidgets.QApplication(sys.argv)
-	window = MainUi(args)
-	window.show()
-	sys.exit(app.exec_())
+	app = MainWindow(args)
+	app.mainloop()
 
 if __name__ == "__main__":
 	ux(cli_args().parse_args())
