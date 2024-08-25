@@ -102,22 +102,9 @@ class LoadWorker(ImageWorker):
 		self.pre()
 
 		if (isinstance(self.fileName, Path)):
-			audioFile = Path(cfg.get("temporary_folder", "tmp"), self.fileName.with_suffix(".wav").name)
-			audioFile.parent.mkdir(parents=True, exist_ok=True)
-
-			if (len(self.data) <= 0):
-				try:
-					ffmpeg_conv(self.fileName, audioFile)
-				except:
-					self.progressed(-1, "Failed to convert to wav!")
-					self.finished()
-					return
-
-				self.progressed(20, "Transforming audio data...")
-
 			try:
-				self.data = load_audio_data(audioFile, plp=self.plp)
-			except:
+				self.data = load_audio_data(self.fileName, plp=self.plp)
+			except Exception as e:
 				self.progressed(-1, "Failed to transform audio data!")
 				self.finished()
 				return

@@ -5,13 +5,16 @@ from scipy.optimize import minimize
 import matplotlib as mpl
 from matplotlib.colors import LinearSegmentedColormap
 from matplotlib.figure import Figure
+from audioread import audio_open
 
 VERSION="?"
 HEATMAP = LinearSegmentedColormap.from_list("intensity",["w", "g", "orange", "r"], N=256)
 
 #TODO: Fix action lag that happens sometimes, maybe change hop?
 def load_audio_data(audio_file, hop_length=1024, frame_length=1024, plp=True):
-	y, sr = librosa.load(audio_file, sr=None, mono=True)
+	y, sr=None,None
+	with audio_open(audio_file) as f:
+		y, sr = librosa.load(f, sr=None, mono=True)
 
 	# Compute beats
 	onset = None
