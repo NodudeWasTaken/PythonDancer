@@ -1,12 +1,12 @@
-from .cli import cmd
-from .ui import ux
-from .util import cli_args
+from . import cli
+from . import ui
+from . import util
 
 if __name__ == "__main__":
-	parser = cli_args()
+	parser = util.cli_args()
 	args = parser.parse_args()
 
 	if (args.cli):
-		cmd(args)
+		cli.cmd(args)
 	else:
-		ux(args)
+		ui.ux(args)
