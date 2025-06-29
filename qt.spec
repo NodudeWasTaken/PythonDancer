@@ -5,7 +5,7 @@ block_cipher = None
 
 
 a = Analysis(
-	['dancer/__main__.py'],
+	['ui_entry.py'],
 	pathex=[],
 	binaries=[],
 	hiddenimports=[
