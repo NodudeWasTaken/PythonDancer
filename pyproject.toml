@@ -9,7 +9,7 @@ python = "^3.8"
 numpy = "<1.24"
 librosa = "==0.10.0.post2"
 matplotlib = "<3.8"
-scipy = "*"
+scipy = "==1.12.0"
 pyinstaller = "*"
 requests = "*"
 

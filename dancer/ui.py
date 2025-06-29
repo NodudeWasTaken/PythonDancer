@@ -627,13 +627,13 @@ Thanks to you for using this software!""") )
 
 		fileName = filedialog.asksaveasfilename(**options)
 		if fileName:
-			fig = render_heatmap(
-				self.data, 
-				self.energy_slider.get() / 10.0,
-				self.pitch_slider.get(),
-				self.OOR()
-			)
-			fig.savefig(fileName, bbox_inches="tight", pad_inches=0)
+			#fig = render_heatmap(
+			#	self.data, 
+			#	self.energy_slider.get() / 10.0,
+			#	self.pitch_slider.get(),
+			#	self.OOR()
+			#)
+			self.audioo_canvas.savefig(fileName, bbox_inches="tight", pad_inches=0)
 		else:
 			print("File save cancelled.")
 
