@@ -10,8 +10,8 @@ git clone https://github.com/NodudeWasTaken/PythonDancer
 cd PythonDancer
 pip install -r requirements.txt
 
-python -m dancer.ui
-python -m dancer.cli -h
+python -m dancer
+python -m dancer --cli -h
 ```
 
 CLI Interface
