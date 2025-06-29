@@ -5,7 +5,7 @@ block_cipher = None
 
 
 a = Analysis(
-	['qt.py'],
+	['dancer/__main__.py'],
 	pathex=[],
 	binaries=[],
 	hiddenimports=[

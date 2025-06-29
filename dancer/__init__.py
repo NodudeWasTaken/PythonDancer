@@ -1,4 +1,4 @@
-import dancer.cli
-import dancer.libfun
-import dancer.ui
-import dancer.util
+from . import cli
+from . import libfun
+from . import ui
+from . import util
