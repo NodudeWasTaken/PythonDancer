@@ -310,7 +310,7 @@ class MainWindow(tk.Tk):
 		center_offset_group.grid(row=0, column=3, sticky="ns", padx=5, pady=5)
 		center_offset_group.rowconfigure(0, weight=1)
 
-		self.center_offset_slider = ttk.Scale(center_offset_group, orient=tk.VERTICAL, from_=100, to=-100, value=0)
+		self.center_offset_slider = ttk.Scale(center_offset_group, orient=tk.VERTICAL, from_=300, to=-300, value=0)
 		self.center_offset_slider.grid(row=0, column=0, sticky="ns")
 
 		options_group = ttk.LabelFrame(self.settings_group, text="Options")
@@ -378,7 +378,7 @@ class MainWindow(tk.Tk):
 		pitch_frame.columnconfigure(1, weight=1)
 
 
-		pitch_label = ttk.Label(pitch_frame, text="Target Pitch")
+		pitch_label = ttk.Label(pitch_frame, text="Target Center")
 		pitch_label.grid(row=0, column=0)
 
 		self.pitch_spinbox_var = tk.IntVar(value=20)
@@ -658,7 +658,7 @@ Thanks to you for using this software!""") )
 		
 	def automap(self):
 		if (self.map_var.get() and len(self.data) > 0):
-			pitch, energy = autoval(self.data, tpi=self.pitch_spinbox_var.get(), target_speed=self.speed_spinbox_var.get(), v2above=self.per_spinbox_var.get()/100.0, opt=self.Automode())
+			pitch, energy = autoval(self.data, tpi=self.center_offset_slider.get(), target_speed=self.speed_spinbox_var.get(), v2above=self.per_spinbox_var.get()/100.0, opt=self.Automode())
 			self.pitch_slider["value"] = int(pitch)
 			self.energy_slider["value"] = int(energy * 10.0)
 
