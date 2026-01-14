@@ -303,7 +303,7 @@ class MainWindow(tk.Tk):
 		amplitude_centering_group.grid(row=0, column=2, sticky="ns", padx=5, pady=5)
 		amplitude_centering_group.rowconfigure(0, weight=1)
 
-		self.amplitude_centering_slider = ttk.Scale(amplitude_centering_group, orient=tk.VERTICAL, from_=100, to=-100, value=0)
+		self.amplitude_centering_slider = ttk.Scale(amplitude_centering_group, orient=tk.VERTICAL, from_=200, to=-200, value=0)
 		self.amplitude_centering_slider.grid(row=0, column=0, sticky="ns")
 
 		center_offset_group = ttk.LabelFrame(self.settings_group, text="Center Offset")
