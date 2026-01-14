@@ -146,7 +146,6 @@ def create_actions_barrier(data, start_time=0, overflow=0):
 	return actions
 
 def create_actions(data, energy_multiplier=1, pitch_range=100, overflow=0, amplitude_centering=0, center_offset=0):
-	# Clone data to avoid modifying original
 	processed_data = data.copy()
 	
 	normalized_pitch = normalize(processed_data["pitch"])
@@ -154,12 +153,8 @@ def create_actions(data, energy_multiplier=1, pitch_range=100, overflow=0, ampli
 	
 	pitch_bias = (100 - pitch_range) / 2
 	
-	# Determine length based on energy length as per JS slice(0, normalized_energy.length)
 	length = len(normalized_energy)
 	
-	# Compute offsets with new formula
-	# JS: pitch * pitch_range + pitch_bias + amplitude_centering * normalized_energy[i] + center_offset
-	# Vectorized numpy operation:
 	processed_data["offsets"] = (
 		normalized_pitch[:length] * pitch_range + 
 		pitch_bias + 
@@ -179,7 +174,7 @@ def speed(A,B, **kwargs):
 
 def autoval(data, tpi=15, target_speed=300, v2above=0.6, opt=1):
 	def cmean(pitch):
-		result = create_actions(data, energy_multiplier=0, pitch_range=pitch)
+		result = create_actions(data, energy_multiplier=0, center_offset=pitch)
 		_,Y = map(list, zip(*result))
 		return np.average(Y)
 

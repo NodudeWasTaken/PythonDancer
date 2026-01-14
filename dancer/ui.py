@@ -139,7 +139,7 @@ class RenderWorker(ImageWorker):
 		self.center_offset = center_offset
 
 	def run(self):
-		self.pre()
+		# Calculate data in thread, do not touch GUI or Figures
 		result = []
 
 		if len(self.data) > 0:
@@ -161,29 +161,44 @@ class RenderWorker(ImageWorker):
 				self.finished()
 				return
 
-			# plotting the graph
-			X,Y = map(list, zip(*result))
+			# Prepare plotting data
+			X,Y = map(np.array, map(list, zip(*result)))
+			
+			plot_data = {
+				"X": X,
+				"Y": Y,
+				"segments": None,
+				"colors": None,
+				"avg_speed": 0
+			}
+
+			# Vectorized speed calculation (needed for speed display even if heatmap is off)
+			dX = X[1:] - X[:-1]
+			dY = np.abs(Y[1:] - Y[:-1])
+			
+			# Avoid divide by zero
+			dX = np.maximum(dX, 1e-9) 
+			
+			v = dY / dX
+			avg_speed = np.mean(v)
+			plot_data["avg_speed"] = avg_speed
+
 			if (self.heatmap):
 				points = np.array([X, Y]).T.reshape(-1, 1, 2)
 				segments = np.concatenate([points[:-1], points[1:]], axis=1)
 
-				colors = np.array([HEATMAP(speed((X[i], Y[i]), (X[i+1], Y[i+1]))) for i in range(len(Y)-1)])
+				normalized_v = np.clip(v / 400.0, 0.0, 1.0)
+				
+				colors = HEATMAP(normalized_v)
+				
+				plot_data["segments"] = segments
+				plot_data["colors"] = colors
 
-				lc = LineCollection(segments, colors=colors, linewidths=.5)
-				self.plot.add_collection(lc)
-				self.plot.autoscale()
-			else:
-				self.plot.plot(X,Y, linewidth=.5)
-			
-			#self.plot.axhline(y=np.nanmean(Y))
+		else:
+			plot_data = None
 
-		self.plot.set_ylim(0,100)
-		if ("at" in self.data): #If data exists
-			self.plot.set_xlim(0,self.data["at"])
 
-		self.post()
-
-		self.done(result, self.fig)
+		self.done(result, plot_data, self.data.get("at", 0))
 		self.finished()
 
 class MainWindow(tk.Tk):
@@ -229,11 +244,26 @@ class MainWindow(tk.Tk):
 		audio_group = ttk.LabelFrame(central_frame, text="Audio Data")
 		audio_group.grid(row=1, column=0, sticky="nsew", padx=5, pady=5)
 		audio_group.columnconfigure(0, weight=1)
-		audio_group.rowconfigure(0, weight=1)
+		# Row 0: Metadata, Row 1: Input, Row 2: Output
 		audio_group.rowconfigure(1, weight=1)
+		audio_group.rowconfigure(2, weight=1)
+
+		# Metadata Frame
+		meta_frame = ttk.Frame(audio_group)
+		meta_frame.grid(row=0, column=0, sticky="ew", padx=5, pady=2)
+		meta_frame.columnconfigure(1, weight=1) # Spacer
+
+		self.meta_duration = ttk.Label(meta_frame, text="Duration: 00:00")
+		self.meta_duration.pack(side="left", padx=10)
+
+		self.meta_actions = ttk.Label(meta_frame, text="Actions: 0")
+		self.meta_actions.pack(side="right", padx=10)
+
+		self.meta_speed = ttk.Label(meta_frame, text="Speed: 0")
+		self.meta_speed.pack(side="right", padx=10)
 
 		self.audio_input = tk.Canvas(audio_group, bg="white")
-		self.audio_input.grid(row=0, column=0, sticky="nsew", padx=5, pady=5)
+		self.audio_input.grid(row=1, column=0, sticky="nsew", padx=5, pady=5)
 		self.audio_input.columnconfigure(0, weight=1)
 		self.audio_input.rowconfigure(0, weight=1)
 
@@ -242,7 +272,7 @@ class MainWindow(tk.Tk):
 		self.audioi_canvas.get_tk_widget().grid(row=0, column=0, sticky="nsew", padx=5, pady=5)
 
 		self.audio_output = tk.Canvas(audio_group, bg="white")
-		self.audio_output.grid(row=1, column=0, sticky="nsew", padx=5, pady=5)
+		self.audio_output.grid(row=2, column=0, sticky="nsew", padx=5, pady=5)
 		self.audio_output.columnconfigure(0, weight=1)
 		self.audio_output.rowconfigure(0, weight=1)
 
@@ -347,6 +377,7 @@ class MainWindow(tk.Tk):
 		pitch_frame.grid(row=4, column=0, sticky="ew", pady=5)
 		pitch_frame.columnconfigure(1, weight=1)
 
+
 		pitch_label = ttk.Label(pitch_frame, text="Target Pitch")
 		pitch_label.grid(row=0, column=0)
 
@@ -368,7 +399,8 @@ class MainWindow(tk.Tk):
 		# Export GroupBox
 		export_group = ttk.LabelFrame(central_frame, text="Export")
 		export_group.grid(row=3, column=0, sticky="ew", padx=5, pady=5)
-		export_group.columnconfigure(1, weight=1)
+		export_group.columnconfigure(0, weight=1)
+		export_group.columnconfigure(1, weight=0)
 
 		self.funscript_button = ttk.Button(export_group, text="Funscript")
 		self.funscript_button.grid(row=0, column=0, padx=5, pady=5, sticky="ew")
@@ -461,10 +493,10 @@ Thanks to you for using this software!""") )
 		self.speed_spinbox_var.trace("w", lambda *args: self.cmapPressed())
 		self.per_spinbox_var.trace("w", lambda *args: self.cmapPressed())
 
-		self.pitch_slider.bind("<ButtonRelease-1>", lambda x: self.RenderWorker())
-		self.energy_slider.bind("<ButtonRelease-1>", lambda x: self.RenderWorker())
-		self.amplitude_centering_slider.bind("<ButtonRelease-1>", lambda x: self.RenderWorker())
-		self.center_offset_slider.bind("<ButtonRelease-1>", lambda x: self.RenderWorker())
+		self.pitch_slider.configure(command=lambda x: self.RenderWorker())
+		self.energy_slider.configure(command=lambda x: self.RenderWorker())
+		self.amplitude_centering_slider.configure(command=lambda x: self.RenderWorker())
+		self.center_offset_slider.configure(command=lambda x: self.RenderWorker())
 
 		self.funscript_button.bind("<Button-1>", lambda x: self.bfunscriptPressed())
 		self.heatmap_button.bind("<Button-1>", lambda x: self.bheatmapPressed())
@@ -497,6 +529,14 @@ Thanks to you for using this software!""") )
 			self.automap()
 			self.funscript_button["state"] = "normal"
 			self.heatmap_button["state"] = "normal"
+		
+		# Update metadata
+		if "at" in data:
+			minutes = int(data["at"] // 60)
+			seconds = int(data["at"] % 60)
+			self.meta_duration["text"] = f"Duration: {minutes:02d}:{seconds:02d}"
+		else:
+			self.meta_duration["text"] = "Duration: 00:00"
 
 		self.RenderWorker()
 		self.audioi_canvas.figure = img
@@ -532,9 +572,36 @@ Thanks to you for using this software!""") )
 			self.__loadworker = self.__load_thread(fileName)
 			self.__loadworker.start()
 
-	def __render_done(self, result, img):
+	def __render_done(self, result, plot_data, duration):
 		self.result = result
-		self.audioo_canvas.figure = img
+		
+		# Update plotting on main thread
+		fig = self.audioo_canvas.figure
+		if fig is None:
+			# Should rely on canvas having a figure
+			return
+			
+		ax = fig.gca()
+		ax.clear()
+		
+		if plot_data:
+			X, Y = plot_data["X"], plot_data["Y"]
+			if self.heatmap_var.get() and plot_data["segments"] is not None:
+				lc = LineCollection(plot_data["segments"], colors=plot_data["colors"], linewidths=.5)
+				ax.add_collection(lc)
+				ax.autoscale()
+			else:
+				ax.plot(X, Y, linewidth=.5)
+			
+			ax.set_ylim(0, 100)
+			if duration > 0:
+				ax.set_xlim(0, duration)
+			
+			if "avg_speed" in plot_data:
+				self.meta_speed["text"] = f"Speed: {int(plot_data['avg_speed'])}"
+			
+			self.meta_actions["text"] = f"Actions: {len(X)}"
+		
 		self.audioo_canvas.draw()
 
 	def __render_repeat_aux(self):
@@ -588,7 +655,7 @@ Thanks to you for using this software!""") )
 	def disableUX(self):
 		self.load_button["state"] = "disabled"
 		disableChildren(self.settings_group)
-
+		
 	def automap(self):
 		if (self.map_var.get() and len(self.data) > 0):
 			pitch, energy = autoval(self.data, tpi=self.pitch_spinbox_var.get(), target_speed=self.speed_spinbox_var.get(), v2above=self.per_spinbox_var.get()/100.0, opt=self.Automode())

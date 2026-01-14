@@ -7,3 +7,4 @@ buildenv
 draw*
 test
 .venv
+config.json
