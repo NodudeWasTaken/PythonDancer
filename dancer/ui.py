@@ -126,7 +126,7 @@ class LoadWorker(ImageWorker):
 class RenderWorker(ImageWorker):
 	done = None
 
-	def __init__(self, size, data, energy_mult, pitch_offset, overflow, heatmap, automode):
+	def __init__(self, size, data, energy_mult, pitch_offset, overflow, heatmap, automode, amplitude_centering, center_offset):
 		super().__init__()
 		self.w, self.h = size
 		self.data = data
@@ -135,6 +135,8 @@ class RenderWorker(ImageWorker):
 		self.overflow = overflow
 		self.heatmap = heatmap
 		self.automode = automode
+		self.amplitude_centering = amplitude_centering
+		self.center_offset = center_offset
 
 	def run(self):
 		self.pre()
@@ -149,7 +151,9 @@ class RenderWorker(ImageWorker):
 					self.data, 
 					energy_multiplier=self.energy_mult,
 					pitch_range=self.pitch_offset,
-					overflow=self.overflow
+					overflow=self.overflow,
+					amplitude_centering=self.amplitude_centering,
+					center_offset=self.center_offset
 				)
 			except Exception as e:
 				print(e)
@@ -187,8 +191,8 @@ class MainWindow(tk.Tk):
 		super().__init__()
 
 		self.title(f"PythonDancer {VERSION}")
-		self.geometry("711x980")
-		self.minsize(711, 980)
+		self.geometry("900x980")
+		self.minsize(900, 980)
 
 		# Central widget layout
 		central_frame = ttk.Frame(self)
@@ -249,7 +253,7 @@ class MainWindow(tk.Tk):
 		# Settings GroupBox
 		self.settings_group = ttk.LabelFrame(central_frame, text="Settings")
 		self.settings_group.grid(row=2, column=0, sticky="ew", padx=5, pady=5)
-		self.settings_group.columnconfigure(2, weight=1)
+		self.settings_group.columnconfigure(4, weight=1)
 
 		pitch_group = ttk.LabelFrame(self.settings_group, text="Pitch -> Offset")
 		pitch_group.grid(row=0, column=0, sticky="ns", padx=5, pady=5)
@@ -265,8 +269,22 @@ class MainWindow(tk.Tk):
 		self.energy_slider = ttk.Scale(energy_group, orient=tk.VERTICAL, from_=100, to=0, value=10)
 		self.energy_slider.grid(row=0, column=0, sticky="ns")
 
+		amplitude_centering_group = ttk.LabelFrame(self.settings_group, text="Amplitude -> Centering")
+		amplitude_centering_group.grid(row=0, column=2, sticky="ns", padx=5, pady=5)
+		amplitude_centering_group.rowconfigure(0, weight=1)
+
+		self.amplitude_centering_slider = ttk.Scale(amplitude_centering_group, orient=tk.VERTICAL, from_=100, to=-100, value=0)
+		self.amplitude_centering_slider.grid(row=0, column=0, sticky="ns")
+
+		center_offset_group = ttk.LabelFrame(self.settings_group, text="Center Offset")
+		center_offset_group.grid(row=0, column=3, sticky="ns", padx=5, pady=5)
+		center_offset_group.rowconfigure(0, weight=1)
+
+		self.center_offset_slider = ttk.Scale(center_offset_group, orient=tk.VERTICAL, from_=100, to=-100, value=0)
+		self.center_offset_slider.grid(row=0, column=0, sticky="ns")
+
 		options_group = ttk.LabelFrame(self.settings_group, text="Options")
-		options_group.grid(row=0, column=2, sticky="ew", padx=5, pady=5)
+		options_group.grid(row=0, column=4, sticky="ew", padx=5, pady=5)
 		options_group.columnconfigure(1, weight=1)
 		options_group.rowconfigure(0, weight=1)
 
@@ -413,9 +431,13 @@ Thanks to you for using this software!""") )
 		# Load
 		self.pitch_slider["value"] = cfg.get("pitch", self.pitch_slider.get())
 		self.energy_slider["value"] = cfg.get("energy", self.energy_slider.get())
+		self.amplitude_centering_slider["value"] = cfg.get("amplitude_centering", self.amplitude_centering_slider.get())
+		self.center_offset_slider["value"] = cfg.get("center_offset", self.center_offset_slider.get())
 		# Save
 		self.pitch_slider.bind("<ButtonRelease-1>", lambda x: cfg.save("pitch", self.pitch_slider.get()))
 		self.energy_slider.bind("<ButtonRelease-1>", lambda x: cfg.save("energy", self.energy_slider.get()))
+		self.amplitude_centering_slider.bind("<ButtonRelease-1>", lambda x: cfg.save("amplitude_centering", self.amplitude_centering_slider.get()))
+		self.center_offset_slider.bind("<ButtonRelease-1>", lambda x: cfg.save("center_offset", self.center_offset_slider.get()))
 
 		# Load
 		self.heatmap_var.set(cfg.get("heatmap", self.heatmap_var.get()))
@@ -441,6 +463,8 @@ Thanks to you for using this software!""") )
 
 		self.pitch_slider.bind("<ButtonRelease-1>", lambda x: self.RenderWorker())
 		self.energy_slider.bind("<ButtonRelease-1>", lambda x: self.RenderWorker())
+		self.amplitude_centering_slider.bind("<ButtonRelease-1>", lambda x: self.RenderWorker())
+		self.center_offset_slider.bind("<ButtonRelease-1>", lambda x: self.RenderWorker())
 
 		self.funscript_button.bind("<Button-1>", lambda x: self.bfunscriptPressed())
 		self.heatmap_button.bind("<Button-1>", lambda x: self.bheatmapPressed())
@@ -540,6 +564,8 @@ Thanks to you for using this software!""") )
 			self.OOR(),
 			self.heatmap_var.get(),
 			self.Automode(),
+			self.amplitude_centering_slider.get(),
+			self.center_offset_slider.get(),
 		)
 		thread = Thread(target=worker.run)
 
@@ -631,7 +657,8 @@ Thanks to you for using this software!""") )
 			#	self.data, 
 			#	self.energy_slider.get() / 10.0,
 			#	self.pitch_slider.get(),
-			#	self.OOR()
+			#	self.OOR(),
+			#	self.amplitude_centering_slider.get()
 			#)
 			self.audioo_canvas.savefig(fileName, bbox_inches="tight", pad_inches=0)
 		else:

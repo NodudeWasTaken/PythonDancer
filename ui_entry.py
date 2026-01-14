@@ -1,4 +1,4 @@
-from dancer.__main__ import main
+from dancer import main
 
 if __name__ == "__main__":
     main()

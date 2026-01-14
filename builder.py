@@ -1,9 +1,14 @@
 import requests
+import sys
+import subprocess
 import io
 import shutil
 import os
 import zipfile
 
+
+print("Fetching binaries...")
+os.system(f"{sys.executable} scripts/fetch_binaries.py")
 
 print("Download UPX")
 with requests.get("https://github.com/upx/upx/releases/download/v4.0.2/upx-4.0.2-win64.zip") as r:

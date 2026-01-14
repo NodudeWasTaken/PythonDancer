@@ -145,10 +145,31 @@ def create_actions_barrier(data, start_time=0, overflow=0):
 
 	return actions
 
-def create_actions(data, energy_multiplier=1, pitch_range=100, overflow=0):
-	data["offsets"] = np.array([i * pitch_range + ((100 - pitch_range) / 2) for i in normalize(data["pitch"])])
-	data["energy_to_pos"] = np.array([i * energy_multiplier * 50 for i in normalize(data["energy"])])
-	return create_actions_barrier(data, overflow=overflow)
+def create_actions(data, energy_multiplier=1, pitch_range=100, overflow=0, amplitude_centering=0, center_offset=0):
+	# Clone data to avoid modifying original
+	processed_data = data.copy()
+	
+	normalized_pitch = normalize(processed_data["pitch"])
+	normalized_energy = normalize(processed_data["energy"])
+	
+	pitch_bias = (100 - pitch_range) / 2
+	
+	# Determine length based on energy length as per JS slice(0, normalized_energy.length)
+	length = len(normalized_energy)
+	
+	# Compute offsets with new formula
+	# JS: pitch * pitch_range + pitch_bias + amplitude_centering * normalized_energy[i] + center_offset
+	# Vectorized numpy operation:
+	processed_data["offsets"] = (
+		normalized_pitch[:length] * pitch_range + 
+		pitch_bias + 
+		amplitude_centering * normalized_energy + 
+		center_offset
+	)
+	
+	processed_data["energy_to_pos"] = normalized_energy * energy_multiplier * 50
+	
+	return create_actions_barrier(processed_data, overflow=overflow)
 
 def _speed(A, B, smax=400.0):
 	v = abs(B[1] - A[1]) / (B[0] - A[0])
@@ -204,12 +225,14 @@ def autoval(data, tpi=15, target_speed=300, v2above=0.6, opt=1):
 	return pres, eres
 
 #TODO: Do better
-def render_heatmap(data, energy, pitch, oor, w=4096, h=128):
+def render_heatmap(data, energy, pitch, oor, amplitude_centering=0, center_offset=0, w=4096, h=128):
 	result = create_actions(
 		data, 
 		energy_multiplier=energy, 
 		pitch_range = pitch,
 		overflow = oor,
+		amplitude_centering=amplitude_centering,
+		center_offset=center_offset
 	)
 	speeds = np.array([speed(result[i],result[i+1]) for i in range(len(result)-1)])
 	gradient = np.vstack([speeds]*h)

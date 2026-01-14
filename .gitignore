@@ -6,3 +6,4 @@ dist
 buildenv
 draw*
 test
+.venv

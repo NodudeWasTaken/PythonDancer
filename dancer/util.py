@@ -53,7 +53,9 @@ def cli_args():
 	parser.add_argument("--auto_mod", type=int, default=2, metavar="[1-3]", choices=irange(1,3), help="Which optimizer to use (cmean, cmeanv2, clen)")
 	parser.add_argument("--pitch", type=int, default=100, metavar="[-200-200]", choices=irange(-200,200), help="The pitch")
 	parser.add_argument("--energy", type=int, default=10, metavar="[0-100]", choices=irange(0,100), help="The energy magnitude")
+	parser.add_argument("--amplitude_centering", type=int, default=0, metavar="[-100-100]", choices=irange(-100,100), help="Amplitude-based centering shift")
 	parser.add_argument("--overflow", type=int, default=0, metavar="[0-2]", choices=irange(0,2), help="Overflow type")
+	parser.add_argument("--center_offset", type=int, default=0, metavar="[-100-100]", choices=irange(-100,100), help="Center offset shift")
 
 	return parser
 

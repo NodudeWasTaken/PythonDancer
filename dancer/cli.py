@@ -52,7 +52,9 @@ def cmd(args):
 		data,
 		energy_multiplier=args.energy,
 		pitch_range=args.pitch,
-		overflow=args.overflow
+		overflow=args.overflow,
+		amplitude_centering=args.amplitude_centering,
+		center_offset=args.center_offset
 	)
 
 	print("Writing...")
@@ -67,7 +69,10 @@ def cmd(args):
 			data,
 			args.energy,
 			args.pitch,
-			args.overflow
+			args.overflow,
+			args.overflow,
+			args.amplitude_centering,
+			args.center_offset
 			).savefig(
 				out_file
 				.with_stem(out_file.stem + "_heatmap")
