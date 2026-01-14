@@ -198,6 +198,7 @@ class RenderWorker(ImageWorker):
 			plot_data = None
 
 
+		self.progressed(100, "Done!")
 		self.done(result, plot_data, self.data.get("at", 0))
 		self.finished()
 
